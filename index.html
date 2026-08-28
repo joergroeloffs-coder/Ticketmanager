@@ -383,6 +383,7 @@ td.n,th.n{text-align:right}
     <div><b id="zSold">0</b><span>ausgegeben</span></div>
     <div><b id="zEin">0</b><span>eingelöst</span></div>
     <div><b id="zSumme">0,00</b><span>Euro</span></div>
+    <div id="kachelNach" class="hide"><b id="zNach">0</b><span>nachgetragen</span></div>
   </div>
 
   <div class="karte">
@@ -440,6 +441,39 @@ td.n,th.n{text-align:right}
         <button class="knopf voll" id="btnKatNeu">Kategorie anlegen</button>
       </div>
       <div id="katFehler" class="hinweis hide"></div>
+    </div>
+  </div>
+
+  <div class="karte">
+    <div class="titel"><h2>Einlass</h2></div>
+    <div class="inhalt">
+      <div class="feldTitel">Karten annehmen, die dieses Gerät nicht kennt</div>
+      <div class="wahl" id="wahlNachtragen">
+        <button type="button" data-nachtragen="ja">Annehmen</button>
+        <button type="button" data-nachtragen="nein">Abweisen</button>
+      </div>
+      <p class="muted" style="margin:10px 0 0">
+        <b>Annehmen</b> heißt: Wer eine Karte vorzeigt, deren Signatur stimmt,
+        kommt hinein, auch wenn sie auf einem anderen Gerät verkauft wurde.
+        Die Karte wird nachgetragen. So arbeiten Kasse und Eingang auf zwei
+        Geräten, ohne miteinander zu reden.
+        <b>Abweisen</b> lässt nur Karten durch, die hier gespeichert sind —
+        das erkennt auch eine stornierte Karte, verlangt aber, dass die Liste
+        vorher eingespielt wurde.
+      </p>
+
+      <div class="feldTitel" style="margin-top:16px">Kassenzeichen</div>
+      <div class="reihe">
+        <input id="kassenzeichen" class="mono" maxlength="1" placeholder="A"
+               style="width:70px;text-align:center">
+        <span class="muted grow">Ein Buchstabe, wenn an diesem Abend mehr als ein
+          Gerät verkauft. Er steht in der Nummer — SF26-<b>B</b>0007 — und
+          verhindert, dass zwei Geräte dieselbe Nummer vergeben.</span>
+      </div>
+      <div class="reihe" style="margin-top:10px">
+        <button class="knopf" id="btnKassenzeichen">Kassenzeichen speichern</button>
+      </div>
+      <div id="kzFehler" class="hinweis hide"></div>
     </div>
   </div>
 
@@ -810,6 +844,7 @@ function leereDaten(){
     events:[], kats:[], tickets:[], nummern:{},
     veranstalter:{name:"Fering Ferian e.V.", zusatz:"Heimatpflege auf Föhr"},
     schluessel:zufallsSchluessel(), aktiv:null, layout:"mehrfach",
+    nachtragen:true, kassenzeichen:"",
   };
 }
 
@@ -846,6 +881,9 @@ function migriere(d){
   else if(typeof d.secret==="string"&&d.secret) neu.schluessel=d.secret;
   neu.aktiv = d.aktiv || d.activeEvent || null;
   neu.layout = (d.layout==="einzeln"||d.layout==="single") ? "einzeln" : "mehrfach";
+  neu.nachtragen = (d.nachtragen!==false);
+  neu.kassenzeichen = /^[A-Z]$/.test(String(d.kassenzeichen||"").toUpperCase())
+                    ? String(d.kassenzeichen).toUpperCase() : "";
 
   neu.events.forEach(function(e){
     if(!e.kuerzel && e.code){ e.kuerzel=e.code; delete e.code; }
@@ -1014,6 +1052,14 @@ function zeichneBuchung(){
   else hin.classList.add("hide");
 }
 
+function zeichneNachtragen(){
+  var kn=$("wahlNachtragen").querySelectorAll("button");
+  for(var i=0;i<kn.length;i++){
+    var an = (kn[i].getAttribute("data-nachtragen")==="ja") === !!db.nachtragen;
+    kn[i].setAttribute("aria-pressed", an ? "true" : "false");
+  }
+}
+
 function zeichneLayoutWahl(){
   var kn=$("wahlLayout").querySelectorAll("button");
   for(var i=0;i<kn.length;i++)
@@ -1027,7 +1073,11 @@ function ticketsErzeugen(){
     var q=korb[k.id]||0;
     for(var i=0;i<q;i++){
       db.nummern[ev.id]=(db.nummern[ev.id]||0)+1;
-      var nummer=String(db.nummern[ev.id]).padStart(4,"0");
+      /* Das Kassenzeichen steht vor der Nummer: SF26-B0007. Verkaufen zwei
+         Geräte denselben Abend, vergeben sie sonst beide die 0007 — zweimal
+         dieselbe Karte, beide mit gültiger Signatur. Ein Buchstabe je Gerät
+         schließt das aus. */
+      var nummer=db.kassenzeichen+String(db.nummern[ev.id]).padStart(4,"0");
       neue.push({
         evId:ev.id, kuerzel:ev.kuerzel, nummer:nummer, sig:signatur(ev.kuerzel,nummer),
         kat:k.name, cent:k.cent, gast:gast, status:"offen", erstellt:Date.now(),
@@ -1107,14 +1157,47 @@ function pruefe(roh){
   for(var i=0;i<db.tickets.length;i++){
     if(db.tickets[i].evId===ev.id && db.tickets[i].nummer===teile[1]){ t=db.tickets[i]; break; }
   }
-  if(!t){ befund("b-nein","Nicht gefunden",
-                 "Ticket "+teile[1]+" ist auf diesem Gerät nicht gespeichert."); return; }
+  if(!t){
+    if(!db.nachtragen){
+      befund("b-nein","Nicht gefunden",
+             "Karte "+teile[1]+" ist auf diesem Gerät nicht gespeichert."); return;
+    }
+    /* Die Signatur stimmt, also stammt die Karte aus dieser Kasse — nur hat
+       dieses Gerät sie nicht verkauft. Das ist der Normalfall, wenn drinnen
+       nachverkauft wird, während draußen gescannt wird. Sie wird eingelassen
+       und nachgetragen.
+
+       Was dabei fehlt, ist die Kategorie und der Preis: die stehen nicht im
+       Code, sondern nur in der Liste des verkaufenden Geräts. Die Karte
+       zählt deshalb bei den Einnahmen nicht mit, sondern wird gesondert
+       ausgewiesen.
+
+       Was dieses Gerät nicht wissen kann: ob die Karte drüben storniert
+       wurde. Wer das ausschließen muss, schaltet das Nachtragen ab und
+       spielt vor dem Einlass die Liste ein. */
+    var nachgetragen={
+      evId:ev.id, kuerzel:ev.kuerzel, nummer:teile[1], sig:teile[2].toLowerCase(),
+      kat:"", cent:null, gast:"", status:"eingeloest",
+      erstellt:Date.now(), eingeloestAm:Date.now(), nachgetragen:true,
+    };
+    db.tickets.push(nachgetragen);
+    /* Den eigenen Zähler mitziehen, damit dieses Gerät die Nummer nicht
+       später noch einmal vergibt, wenn hier auch verkauft wird. */
+    var zahl=parseInt(String(teile[1]).replace(/^[A-Z]/,""),10);
+    if(zahl && zahl>(db.nummern[ev.id]||0)) db.nummern[ev.id]=zahl;
+    sichern();
+    befund("b-ja","Gültig · nachgetragen",
+           "Auf diesem Gerät nicht verkauft, die Signatur stimmt. · "+ev.name);
+    zeichneListe(); zeichneZahlen();
+    return;
+  }
   if(t.status==="storniert"){
     befund("b-nein","Storniert", t.kat+(t.gast?" · "+t.gast:"")); return;
   }
   if(t.status==="eingeloest"){
     befund("b-nein","Bereits eingelöst",
-           t.kat+" · eingelassen "+zeitpunkt(t.eingeloestAm||Date.now())); return;
+           (t.nachgetragen?"nachgetragen":t.kat)+
+           " · eingelassen "+zeitpunkt(t.eingeloestAm||Date.now())); return;
   }
 
   t.status="eingeloest"; t.eingeloestAm=Date.now(); sichern();
@@ -1246,7 +1329,9 @@ function zeichneListe(){
   $("ticketListe").innerHTML=liste.map(function(t){
     return '<div class="zeile">'+
       '<span class="grow"><span class="mono" style="font-size:13px">'+esc(ticketCode(t))+'</span><br>'+
-      '<span class="muted">'+esc(t.kat)+' · '+eur(t.cent)+' €'+
+      '<span class="muted">'+
+      (t.nachgetragen ? 'nachgetragen, auf diesem Gerät nicht verkauft'
+                      : esc(t.kat)+' · '+eur(t.cent)+' €')+
       (t.gast?' · '+esc(t.gast):'')+
       (t.status==="eingeloest"&&t.eingeloestAm?' · eingelassen '+uhrzeit(t.eingeloestAm)+' Uhr':'')+
       '</span></span>'+
@@ -1261,26 +1346,42 @@ function zeichneListe(){
 function zeichneZahlen(){
   var ev=aktivesEvent();
   var liste=db.tickets.filter(function(t){ return ev && t.evId===ev.id && t.status!=="storniert"; });
+
+  /* Nachgetragene Karten sind hier eingelassen, aber nicht verkauft worden.
+     Sie in "ausgegeben" und in die Summe zu werfen, hieße die Kasse falsch
+     abrechnen: ihr Preis steht nicht im Code und ist diesem Gerät unbekannt.
+     Sie stehen deshalb für sich. */
+  var verkauft=liste.filter(function(t){ return !t.nachgetragen; });
+  var nachgetragen=liste.filter(function(t){ return t.nachgetragen; });
   var ein=liste.filter(function(t){return t.status==="eingeloest";}).length;
-  var summe=liste.reduce(function(a,t){return a+t.cent;},0);
-  $("zSold").textContent=liste.length;
+  var summe=verkauft.reduce(function(a,t){return a+(t.cent||0);},0);
+
+  $("zSold").textContent=verkauft.length;
   $("zEin").textContent=ein;
   $("zSumme").textContent=eur(summe);
+  $("zNach").textContent=nachgetragen.length;
+  $("kachelNach").classList.toggle("hide", nachgetragen.length===0);
 
   var nach={};
-  liste.forEach(function(t){
+  verkauft.forEach(function(t){
     if(!nach[t.kat]) nach[t.kat]={n:0,cent:0,ein:0};
-    nach[t.kat].n++; nach[t.kat].cent+=t.cent;
+    nach[t.kat].n++; nach[t.kat].cent+=(t.cent||0);
     if(t.status==="eingeloest") nach[t.kat].ein++;
   });
   var schl=Object.keys(nach);
-  $("nachKategorie").innerHTML = schl.length
-    ? '<tr><th>Kategorie</th><th class="n">Stück</th><th class="n">eingelöst</th><th class="n">Euro</th></tr>'+
-      schl.map(function(k){
-        return '<tr><td>'+esc(k)+'</td><td class="n">'+nach[k].n+'</td>'+
-               '<td class="n">'+nach[k].ein+'</td>'+
-               '<td class="n mono">'+eur(nach[k].cent)+'</td></tr>';
-      }).join("")
+  var zeilen = schl.map(function(k){
+    return '<tr><td>'+esc(k)+'</td><td class="n">'+nach[k].n+'</td>'+
+           '<td class="n">'+nach[k].ein+'</td>'+
+           '<td class="n mono">'+eur(nach[k].cent)+'</td></tr>';
+  }).join("");
+  if(nachgetragen.length){
+    zeilen += '<tr><td class="muted">nachgetragen, anderswo verkauft</td>'+
+              '<td class="n muted">—</td>'+
+              '<td class="n">'+nachgetragen.length+'</td>'+
+              '<td class="n muted">—</td></tr>';
+  }
+  $("nachKategorie").innerHTML = zeilen
+    ? '<tr><th>Kategorie</th><th class="n">Stück</th><th class="n">eingelöst</th><th class="n">Euro</th></tr>'+zeilen
     : '<tr><td class="muted">Noch nichts verkauft.</td></tr>';
 }
 
@@ -1330,7 +1431,7 @@ function zeichneKats(){
 
 function allesZeichnen(){
   zeichneEvents(); zeichneKats(); zeichneKacheln(); zeichneBuchung();
-  zeichneLayoutWahl(); zeichneListe(); zeichneZahlen();
+  zeichneLayoutWahl(); zeichneNachtragen(); zeichneListe(); zeichneZahlen();
 }
 
 /* ============================ Verdrahtung ============================ */
@@ -1355,6 +1456,7 @@ function start(){
   $("schluessel").value=db.schluessel;
   $("vName").value=db.veranstalter.name||"";
   $("vZusatz").value=db.veranstalter.zusatz||"";
+  $("kassenzeichen").value=db.kassenzeichen||"";
   allesZeichnen();
   zeichnePruefLog();
 
@@ -1472,6 +1574,25 @@ function start(){
   });
 
   /* ---- Veranstalter ---- */
+  /* ---- Einlass ---- */
+  $("wahlNachtragen").addEventListener("click",function(e){
+    var w=e.target.getAttribute&&e.target.getAttribute("data-nachtragen");
+    if(!w) return;
+    db.nachtragen=(w==="ja"); sichern(); zeichneNachtragen();
+    melden(db.nachtragen ? "Unbekannte Karten werden angenommen"
+                         : "Nur gespeicherte Karten werden eingelassen");
+  });
+  $("btnKassenzeichen").addEventListener("click",function(){
+    var v=$("kassenzeichen").value.trim().toUpperCase(), f=$("kzFehler");
+    if(v && !/^[A-Z]$/.test(v)){
+      f.textContent="Das Kassenzeichen ist ein einzelner Buchstabe von A bis Z, oder leer.";
+      f.classList.remove("hide"); return;
+    }
+    f.classList.add("hide");
+    db.kassenzeichen=v; sichern(); $("kassenzeichen").value=v;
+    melden(v ? ("Kassenzeichen "+v+" gespeichert") : "Kassenzeichen entfernt");
+  });
+
   $("btnVeranstalter").addEventListener("click",function(){
     db.veranstalter={name:$("vName").value.trim(), zusatz:$("vZusatz").value.trim()};
     sichern(); melden("Veranstalter gespeichert");
@@ -1504,6 +1625,7 @@ function start(){
       $("schluessel").value=db.schluessel;
       $("vName").value=db.veranstalter.name||"";
       $("vZusatz").value=db.veranstalter.zusatz||"";
+      $("kassenzeichen").value=db.kassenzeichen||"";
       allesZeichnen(); zeichnePruefLog(); melden("Daten geladen");
     };
     r.readAsText(f);
