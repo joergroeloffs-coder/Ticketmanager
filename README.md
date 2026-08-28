@@ -4,7 +4,7 @@ Abendkasse für Veranstaltungen: Karten verkaufen, drucken und am Eingang
 prüfen. Eine einzige HTML-Datei, ohne Server, ohne Netz, ohne
 Abhängigkeiten.
 
-**Im Browser öffnen:** https://joergroeloffs-coder.github.io/ticketmanager/
+**Im Browser öffnen:** https://joergroeloffs-coder.github.io/Ticketmanager/
 
 ## Wie es arbeitet
 
