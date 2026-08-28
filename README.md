@@ -20,13 +20,15 @@ Abend sichern will, nimmt *Einstellungen → Sicherung → Exportieren*.
 
 ## Am Eingang
 
-Über die Adresse oben liest die Kasse QR-Codes mit der Kamera. Das
-verlangt Chrome oder Edge; Firefox und Safari bringen den eingebauten
-QR-Leser nicht mit, dort wird der Code eingetippt.
+Über die Adresse oben liest die Kasse QR-Codes mit der Kamera — auf
+jedem Gerät, auch auf iPhone und iPad. Sie bringt den QR-Leser selbst
+mit (jsQR, Apache-2.0, im Quelltext); wo der Browser einen eingebauten
+hat, wird der genommen, weil er schneller ist.
 
 Aus einer heruntergeladenen Datei heraus (`file://`) bleibt die Kamera
-aus — das untersagen alle Browser. Verkauf, Druck und das Eintippen
-funktionieren dort trotzdem vollständig.
+aus — das untersagen alle Browser, und daran lässt sich nichts drehen.
+Verkauf, Druck und das Eintippen des Codes funktionieren dort trotzdem
+vollständig. Für den Einlass ist die Adresse oben der richtige Weg.
 
 ## Herkunft
 
