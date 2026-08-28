@@ -1,0 +1,1469 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ticketkasse · Fering Vereinsmanager</title>
+
+<!--
+  Ticketkasse — Abendkasse für Veranstaltungen des Vereins.
+
+  Die Datei steht bewusst für sich allein: kein Server, kein Netz, keine
+  Abhängigkeiten. Sie wird auf das Gerät kopiert, das am Eingang steht, und
+  per Doppelklick geöffnet. Deshalb stecken Signatur und QR-Code hier im
+  Quelltext statt in einer Bibliothek, und deshalb liegen die Daten im
+  Speicher des Browsers.
+
+  Das Aussehen folgt dem Vereinsmanager: dieselben Farben aus
+  src/kern/stammdaten.js, dieselben Maße und Bausteine aus
+  src/ui/bausteine.jsx, dasselbe Druckbild wie src/ui/druckrahmen.jsx.
+  Weil hier aber im Stehen und im Halbdunkel getippt wird, sind die
+  Kachelnr und der Druckknopf größer als die 32 Pixel der Schreibtisch-
+  Oberfläche — die Farben und die Schrift bleiben dieselben.
+-->
+
+<style>
+/* ===================== Farben und Maße des Hauses =====================
+   Die Werte sind aus stammdaten.js (C) und bausteine.jsx (M)
+   übernommen. Wer dort etwas ändert, ändert es auch hier. */
+:root{
+  --papier:#FAF8F1;      /* Bogen, leicht cremig */
+  --flaeche:#FFFFFF;
+  --grund:#E9EDE7;       /* Hintergrund der Seite */
+  --linie:#CDB77E;       /* goldener Rand */
+  --linieFein:#E6DCC0;   /* feine goldene Trennlinie */
+  --tinte:#10251A;       /* beinahe schwarzes Tannengrün */
+  --tinteWeich:#57685C;
+  --watt:#1E5C3E;        /* das edle Grün */
+  --wattHell:#E5EFE8;
+  --messing:#80621C;
+  --messingRand:#B08D3C;
+  --messingHell:#F7F0DC;
+  --ziegel:#93382B;
+  --ziegelHell:#F7E7E2;
+  --kopf:#0C1D14;
+  --kopfWeich:#93A899;
+  --kopfFeld:#1A3325;
+  --kopfRand:#39543F;
+  --goldKante:#B08D3C;
+
+  --radius:4px;
+  --hoehe:32px;
+  --hoeheKlein:26px;
+  --breiteMin:84px;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--grund); color:var(--tinte);
+  font-family:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:15px; line-height:1.5; -webkit-text-size-adjust:100%;
+}
+.serif{font-family:'Newsreader',Georgia,serif}
+.mono{font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-variant-numeric:tabular-nums}
+.seitenBreite{max-width:1080px;margin:0 auto;padding-left:20px;padding-right:20px}
+.hide{display:none !important}
+.muted{color:var(--tinteWeich);font-size:14px}
+.grow{flex:1;min-width:0}
+.reihe{display:flex;gap:8px;align-items:center}
+
+/* ----------------------------- Kopf ----------------------------- */
+header{background:var(--kopf);color:var(--papier);border-bottom:2px solid var(--goldKante)}
+.kopfzeile{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;
+           gap:16px;padding-top:14px;padding-bottom:12px}
+.marke{font-size:11px;text-transform:uppercase;letter-spacing:.22em;color:var(--kopfWeich);
+       margin-bottom:4px}
+.marke .version{letter-spacing:normal;margin-left:8px;opacity:.75}
+.anlassName{font-family:'Newsreader',Georgia,serif;font-size:26px;line-height:1.1}
+.anlassZusatz{font-size:12px;color:var(--kopfWeich);margin-top:4px}
+.kopfFeldGruppe{display:flex;flex-direction:column;gap:4px}
+.kopfFeldGruppe label{font-size:12px;color:var(--kopfWeich)}
+select.kopfFeld{background:var(--kopfFeld);color:var(--papier);border:1px solid var(--kopfRand);
+                min-width:200px}
+
+nav{display:flex;gap:4px;flex-wrap:wrap;padding-bottom:6px}
+nav button{
+  flex:1 1 104px;min-width:104px;border:0;border-top:3px solid transparent;
+  border-bottom:1px solid rgba(0,0,0,.25);border-radius:var(--radius);
+  padding:9px 8px;font:inherit;font-size:14px;cursor:pointer;
+  background:rgba(255,255,255,.05);color:#93A8A5;
+}
+nav button[aria-current="true"]{
+  background:var(--watt);color:var(--papier);
+  border-top-color:var(--watt);border-bottom-color:var(--watt);
+}
+
+/* ---------------------------- Karten ---------------------------- */
+main{padding-top:20px;padding-bottom:80px}
+.karte{background:var(--flaeche);border:1px solid var(--linieFein);border-radius:var(--radius);
+       box-shadow:0 1px 2px rgba(16,37,26,.04);margin-bottom:18px}
+.karte>.titel{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:48px;padding:6px 16px;border-bottom:1px solid var(--linie);
+}
+.karte>.titel h2{
+  margin:0;font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--tinteWeich);
+}
+.karte>.inhalt{padding:16px}
+
+/* --------------------- Felder und Knöpfe ------------------------ */
+input,select,textarea{
+  width:100%;height:var(--hoehe);padding:0 8px;font:inherit;font-size:14px;
+  border:1px solid var(--linie);border-radius:var(--radius);
+  background:var(--papier);color:var(--tinte);outline:none;line-height:30px;
+}
+input[type=date]{line-height:normal}
+input:focus,select:focus,textarea:focus{border-color:var(--watt)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--watt);outline-offset:1px}
+label.feld{display:block}
+label.feld>span,.feldTitel{display:block;font-size:11px;text-transform:uppercase;
+                letter-spacing:.08em;color:var(--tinteWeich);margin-bottom:4px}
+
+.knopf{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:var(--hoehe);min-width:var(--breiteMin);padding:0 12px;
+  font:inherit;font-size:14px;line-height:1;border-radius:var(--radius);
+  background:transparent;color:var(--tinte);border:1px solid var(--linie);
+  white-space:nowrap;cursor:pointer;
+}
+.knopf.voll{background:var(--watt);color:#fff;border-color:var(--watt)}
+.knopf.warn{color:var(--ziegel);border-color:var(--ziegel)}
+.knopf.klein{height:var(--hoeheKlein);min-width:0;padding:0 8px;font-size:12px}
+.knopf[disabled]{opacity:.4;cursor:not-allowed}
+.knopf.gross{height:48px;font-size:17px}
+
+/* Zwei Knöpfe, von denen immer einer eingerastet ist. Für Entscheidungen
+   mit genau zwei Möglichkeiten ist das schneller zu treffen als eine
+   Auswahlliste — an der Kasse zählt jeder Handgriff. */
+.wahl{display:flex;gap:0}
+.wahl button{
+  flex:1;height:var(--hoehe);font:inherit;font-size:13px;cursor:pointer;
+  background:var(--papier);color:var(--tinte);border:1px solid var(--linie);
+}
+.wahl button:first-child{border-radius:var(--radius) 0 0 var(--radius)}
+.wahl button:last-child{border-radius:0 var(--radius) var(--radius) 0;border-left:0}
+.wahl button[aria-pressed="true"]{background:var(--watt);color:#fff;border-color:var(--watt)}
+
+/* --------------------------- Kacheln ---------------------------- */
+.kacheln{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(min-width:680px){.kacheln{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.kachel{
+  position:relative;min-height:94px;padding:12px 12px 10px 18px;
+  border:1px solid var(--linieFein);border-radius:var(--radius);background:var(--flaeche);
+  display:flex;flex-direction:column;justify-content:space-between;gap:6px;
+  font:inherit;color:var(--tinte);text-align:left;cursor:pointer;
+  box-shadow:0 1px 2px rgba(16,37,26,.04);
+}
+.kachel .balken{position:absolute;left:0;top:0;bottom:0;width:6px;
+                border-radius:var(--radius) 0 0 var(--radius)}
+.kachel .bez{font-family:'Newsreader',Georgia,serif;font-size:19px;line-height:1.15}
+.kachel .preis{font-size:14px;color:var(--tinteWeich)}
+.kachel .zahl{
+  position:absolute;top:8px;right:8px;min-width:28px;height:28px;padding:0 8px;
+  border-radius:14px;background:var(--watt);color:var(--papier);
+  font-size:15px;display:flex;align-items:center;justify-content:center;
+}
+.kachel .weniger{
+  position:absolute;bottom:8px;right:8px;width:32px;height:32px;border-radius:16px;
+  border:1px solid var(--linie);background:var(--papier);color:var(--tinteWeich);
+  font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;
+}
+
+/* --------------------------- Buchung ---------------------------- */
+.buchungszeile{display:flex;justify-content:space-between;gap:12px;padding:6px 0;
+               border-bottom:1px solid var(--linieFein)}
+.summe{display:flex;justify-content:space-between;gap:12px;padding-top:10px;
+       font-family:'Newsreader',Georgia,serif;font-size:20px}
+
+/* ---------------------------- Zeilen ---------------------------- */
+.zeile{display:flex;align-items:center;gap:10px;padding:8px 0;
+       border-bottom:1px solid var(--linieFein)}
+.zeile:last-child{border-bottom:0}
+.marker{font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;
+        border-radius:99px;white-space:nowrap}
+.m-offen{background:var(--messingHell);color:var(--messing)}
+.m-ein{background:var(--wattHell);color:var(--watt)}
+.m-storno{background:var(--ziegelHell);color:var(--ziegel)}
+
+.befund{border-radius:var(--radius);padding:14px;margin-top:12px;
+        font-family:'Newsreader',Georgia,serif;font-size:19px}
+.befund .dazu{font-family:'Inter',system-ui,sans-serif;font-size:14px;margin-top:4px}
+.b-ja{background:var(--wattHell);color:var(--watt);border:1px solid var(--watt)}
+.b-nein{background:var(--ziegelHell);color:var(--ziegel);border:1px solid var(--ziegel)}
+.b-still{background:var(--papier);color:var(--tinteWeich);border:1px solid var(--linieFein);
+         font-family:'Inter',system-ui,sans-serif;font-size:14px}
+
+.zahlen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.zahlen div{background:var(--flaeche);border:1px solid var(--linieFein);
+            border-radius:var(--radius);padding:12px}
+.zahlen b{display:block;font-family:'Newsreader',Georgia,serif;font-size:24px;font-weight:400}
+.zahlen span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--tinteWeich)}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:.08em;
+   color:var(--tinteWeich);padding:0 0 8px;text-align:left;white-space:nowrap}
+td{padding:6px 0;border-top:1px solid var(--linieFein)}
+td.n,th.n{text-align:right}
+
+#video{width:100%;max-height:320px;border-radius:var(--radius);background:#000;display:block;
+       object-fit:cover}
+
+.hinweis{background:var(--ziegelHell);border:1px solid var(--ziegel);color:var(--ziegel);
+         border-radius:var(--radius);padding:10px;font-size:14px;margin-top:10px}
+
+#meldung{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:60;
+  background:var(--kopf);color:var(--papier);padding:10px 16px;border-radius:var(--radius);
+  border:1px solid var(--goldKante);font-size:14px;opacity:0;pointer-events:none;
+  transition:opacity .18s;
+}
+#meldung.an{opacity:1}
+
+/* ============================ Ausdruck ============================
+   Dasselbe Blatt wie im Vereinsmanager: A4, weiße Fläche, Serifenschrift,
+   feine schwarze Linien. Die Karte trägt den Veranstalter im Kopf, damit
+   sie auch ausgeschnitten noch für sich steht. */
+#druck{display:none}
+.bogen{padding:12mm}
+.bogen.mehrfach{display:grid;grid-template-columns:1fr 1fr;gap:6mm}
+.bogen.einzeln{display:block}
+
+.ticket{
+  display:flex;gap:4mm;align-items:stretch;
+  border:0.6pt solid #000;padding:3mm;background:#fff;color:#000;
+  font-family:'Newsreader',Georgia,serif;font-size:9pt;line-height:1.35;
+  break-inside:avoid;page-break-inside:avoid;
+}
+.bogen.mehrfach .ticket{height:56mm}
+.bogen.einzeln .ticket{height:88mm;break-after:page;page-break-after:always;margin-bottom:6mm}
+.bogen.einzeln .ticket:last-child{break-after:auto;page-break-after:auto}
+
+.ticket .qr{flex:0 0 auto;width:26mm;height:26mm;align-self:flex-start}
+.bogen.einzeln .ticket .qr{width:48mm;height:48mm;align-self:center}
+.ticket .qr svg{display:block;width:100%;height:100%}
+
+.ticket .daten{flex:1;min-width:0;display:flex;flex-direction:column}
+.ticket .veranstalter{
+  font-family:'Inter',system-ui,sans-serif;font-size:7pt;text-transform:uppercase;
+  letter-spacing:.10em;line-height:1.4;
+  border-bottom:0.6pt solid #000;padding-bottom:1.5mm;margin-bottom:1.5mm;
+}
+.ticket .veranstalter span{display:block;letter-spacing:.06em}
+.ticket .wo{font-size:8.5pt}
+.ticket .anlass{font-size:12pt;font-weight:600;line-height:1.15}
+.ticket .wann{font-size:8.5pt}
+.ticket .kategorie{font-size:16pt;font-weight:600;margin-top:auto;line-height:1.1}
+/* Auf der ganzen Seite steht die Kategorie oben beim Anlass und nicht
+   am unteren Rand — sonst klafft in der Mitte ein Loch. Preis und Code
+   sinken stattdessen nach unten. */
+.bogen.einzeln .ticket .kategorie{font-size:26pt;margin-top:6mm}
+.bogen.einzeln .ticket .preis{margin-top:auto;font-size:11pt}
+.bogen.einzeln .ticket .code{font-size:9pt}
+.bogen.einzeln .ticket .abriss{font-size:10pt}
+.ticket .gast{font-size:9pt}
+.ticket .preis{font-family:'IBM Plex Mono',monospace;font-size:9pt;font-variant-numeric:tabular-nums}
+.ticket .code{font-family:'IBM Plex Mono',monospace;font-size:7.5pt;letter-spacing:.02em;
+              border-top:0.6pt solid #000;padding-top:1.2mm;margin-top:1.2mm}
+
+.ticket .abriss{
+  flex:0 0 auto;border-left:0.6pt dashed #000;padding-left:2.5mm;margin-left:1mm;
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  font-family:'Inter',system-ui,sans-serif;font-size:8pt;letter-spacing:.14em;
+  text-transform:uppercase;display:flex;align-items:center;justify-content:center;
+}
+
+@media print{
+  header,main,#meldung{display:none !important}
+  body{background:#fff}
+  #druck{display:block}
+  @page{size:A4;margin:0}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="seitenBreite kopfzeile">
+    <div>
+      <div class="marke">Fering Vereinsmanager · Ticketkasse<span class="version" id="version"></span></div>
+      <div class="anlassName" id="kopfAnlass">Kein Event</div>
+      <div class="anlassZusatz" id="kopfZusatz"></div>
+    </div>
+    <div class="kopfFeldGruppe">
+      <label for="evSel">Veranstaltung</label>
+      <select id="evSel" class="kopfFeld"></select>
+    </div>
+  </div>
+  <nav class="seitenBreite">
+    <button data-reiter="kasse" aria-current="true">Kasse</button>
+    <button data-reiter="einlass">Einlass</button>
+    <button data-reiter="tickets">Tickets</button>
+    <button data-reiter="einstellungen">Einstellungen</button>
+  </nav>
+</header>
+
+<main class="seitenBreite">
+
+<!-- ============================ KASSE ============================ -->
+<section id="reiter-kasse">
+  <div class="karte">
+    <div class="titel"><h2>Kategorie wählen</h2></div>
+    <div class="inhalt">
+      <div class="kacheln" id="kacheln"></div>
+      <div id="keineKategorien" class="muted hide">
+        Noch keine Kategorien angelegt. Das geschieht unter Einstellungen.
+      </div>
+    </div>
+  </div>
+
+  <div class="karte">
+    <div class="titel">
+      <h2>Buchung</h2>
+      <button class="knopf klein" id="btnLeeren">Leeren</button>
+    </div>
+    <div class="inhalt">
+      <div id="buchung"></div>
+
+      <div style="margin-top:14px">
+        <label class="feld"><span>Name des Gastes (freiwillig)</span>
+          <input id="gast" autocomplete="off"></label>
+      </div>
+
+      <!-- Die Anordnung gehört an die Kasse, nicht in die Einstellungen:
+           ob eine Reihe Karten zum Ausschneiden gedruckt wird oder eine
+           einzelne große, entscheidet sich beim Verkauf. -->
+      <div style="margin-top:12px">
+        <div class="feldTitel">Anordnung auf dem Blatt</div>
+        <div class="wahl" id="wahlLayout">
+          <button type="button" data-layout="mehrfach">Mehrere pro Seite</button>
+          <button type="button" data-layout="einzeln">Eine pro Seite</button>
+        </div>
+      </div>
+
+      <div style="margin-top:14px">
+        <button class="knopf voll gross" id="btnDrucken" style="width:100%" disabled>
+          Tickets erzeugen und drucken
+        </button>
+      </div>
+      <div id="kasseHinweis" class="hinweis hide"></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== EINLASS =========================== -->
+<section id="reiter-einlass" class="hide">
+  <div class="karte">
+    <div class="titel"><h2>Code prüfen</h2></div>
+    <div class="inhalt">
+      <input id="scanFeld" class="mono" placeholder="Code eintippen oder scannen"
+             autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="reihe" style="margin-top:10px">
+        <button class="knopf voll grow" id="btnPruefen">Prüfen</button>
+        <button class="knopf grow" id="btnKamera">Kamera</button>
+      </div>
+      <video id="video" playsinline class="hide" style="margin-top:10px"></video>
+      <div id="kameraHinweis" class="hinweis hide"></div>
+      <div id="befund" class="befund b-still">Noch nichts geprüft.</div>
+    </div>
+  </div>
+
+  <div class="karte">
+    <div class="titel"><h2>Zuletzt geprüft</h2></div>
+    <div class="inhalt"><div id="pruefLog" class="muted">Noch keine Prüfungen.</div></div>
+  </div>
+</section>
+
+<!-- =========================== TICKETS =========================== -->
+<section id="reiter-tickets" class="hide">
+  <div class="zahlen" style="margin-bottom:18px">
+    <div><b id="zSold">0</b><span>ausgegeben</span></div>
+    <div><b id="zEin">0</b><span>eingelöst</span></div>
+    <div><b id="zSumme">0,00</b><span>Euro</span></div>
+  </div>
+
+  <div class="karte">
+    <div class="titel"><h2>Nach Kategorie</h2></div>
+    <div class="inhalt"><table id="nachKategorie"></table></div>
+  </div>
+
+  <div class="karte">
+    <div class="titel">
+      <h2>Einzeltickets</h2>
+      <button class="knopf klein" id="btnNachdruck">Offene neu drucken</button>
+    </div>
+    <div class="inhalt">
+      <label class="feld"><span>Suchen</span>
+        <input id="suche" placeholder="Code, Kategorie oder Name" autocomplete="off"></label>
+      <div id="ticketListe" style="margin-top:10px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== EINSTELLUNGEN ======================== -->
+<section id="reiter-einstellungen" class="hide">
+  <div class="karte">
+    <div class="titel"><h2>Veranstaltungen</h2></div>
+    <div class="inhalt">
+      <div id="evListe"></div>
+      <div style="margin-top:14px;display:grid;gap:8px;grid-template-columns:1fr">
+        <label class="feld"><span>Name</span><input id="evName" placeholder="Sommerfest"></label>
+        <div class="reihe">
+          <label class="feld grow"><span>Datum</span><input id="evDatum" type="date"></label>
+          <label class="feld grow"><span>Kürzel</span>
+            <input id="evKuerzel" class="mono" placeholder="SF26" maxlength="6"></label>
+        </div>
+        <label class="feld"><span>Ort oder Zusatz (freiwillig)</span>
+          <input id="evOrt" placeholder="Gemeindehaus Nieblum"></label>
+      </div>
+      <div class="reihe" style="margin-top:10px">
+        <button class="knopf voll" id="btnEvNeu">Veranstaltung anlegen</button>
+      </div>
+      <div id="evFehler" class="hinweis hide"></div>
+    </div>
+  </div>
+
+  <div class="karte">
+    <div class="titel"><h2>Kategorien</h2></div>
+    <div class="inhalt">
+      <div id="katListe"></div>
+      <div class="reihe" style="margin-top:14px">
+        <label class="feld grow"><span>Bezeichnung</span>
+          <input id="katName" placeholder="Erwachsene"></label>
+        <label class="feld" style="width:130px"><span>Preis</span>
+          <input id="katPreis" inputmode="decimal" placeholder="0,00" style="text-align:right"></label>
+      </div>
+      <div class="reihe" style="margin-top:10px">
+        <button class="knopf voll" id="btnKatNeu">Kategorie anlegen</button>
+      </div>
+      <div id="katFehler" class="hinweis hide"></div>
+    </div>
+  </div>
+
+  <div class="karte">
+    <div class="titel"><h2>Veranstalter</h2></div>
+    <div class="inhalt">
+      <p class="muted" style="margin:0 0 12px">Steht im Kopf jeder gedruckten Karte.</p>
+      <label class="feld"><span>Name</span><input id="vName"></label>
+      <label class="feld" style="margin-top:8px"><span>Zusatz</span>
+        <input id="vZusatz" placeholder="Heimatpflege auf Föhr"></label>
+      <div class="reihe" style="margin-top:10px">
+        <button class="knopf" id="btnVeranstalter">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="karte">
+    <div class="titel"><h2>Sicherung</h2></div>
+    <div class="inhalt">
+      <p class="muted" style="margin:0 0 12px">
+        Alle Daten liegen nur auf diesem Gerät. Sichere sie regelmäßig als Datei.
+      </p>
+      <div class="reihe">
+        <button class="knopf grow" id="btnExport">Exportieren</button>
+        <button class="knopf grow" id="btnImport">Importieren</button>
+      </div>
+      <input type="file" id="dateiEin" accept="application/json" class="hide">
+      <div id="speicherHinweis" class="hinweis hide"></div>
+    </div>
+  </div>
+
+  <div class="karte">
+    <div class="titel"><h2>Schlüssel</h2></div>
+    <div class="inhalt">
+      <p class="muted" style="margin:0 0 12px">
+        Signiert die Codes auf den Karten. Wird er geändert, sind alle bisher
+        gedruckten Tickets ungültig.
+      </p>
+      <input id="schluessel" class="mono">
+      <div class="reihe" style="margin-top:10px">
+        <button class="knopf" id="btnSchluessel">Schlüssel speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="karte">
+    <div class="titel"><h2>Zurücksetzen</h2></div>
+    <div class="inhalt">
+      <button class="knopf warn" id="btnLoeschen" style="width:100%">Alle Daten löschen</button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div id="druck"><div class="bogen" id="bogen"></div></div>
+<div id="meldung"></div>
+
+<script>
+"use strict";
+
+var VERSION = "1.0";
+
+/* ================== SHA-256 und HMAC ==================
+   WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
+   aber als Datei geöffnet, also rechnet sie selbst. */
+var K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+function rr(x,n){return (x>>>n)|(x<<(32-n));}
+function sha256Bytes(msg){
+  var l=msg.length, bl=l*8, m=msg.slice();
+  m.push(0x80); while(m.length%64!==56) m.push(0);
+  for(var i=7;i>=0;i--) m.push(Math.floor(bl/Math.pow(2,i*8))&255);
+  var H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  var w=new Array(64);
+  for(var o=0;o<m.length;o+=64){
+    for(i=0;i<16;i++) w[i]=(m[o+i*4]<<24)|(m[o+i*4+1]<<16)|(m[o+i*4+2]<<8)|m[o+i*4+3];
+    for(i=16;i<64;i++){
+      var s0=rr(w[i-15],7)^rr(w[i-15],18)^(w[i-15]>>>3);
+      var s1=rr(w[i-2],17)^rr(w[i-2],19)^(w[i-2]>>>10);
+      w[i]=(w[i-16]+s0+w[i-7]+s1)|0;
+    }
+    var a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+    for(i=0;i<64;i++){
+      var S1=rr(e,6)^rr(e,11)^rr(e,25), ch=(e&f)^((~e)&g);
+      var t1=(h+S1+ch+K[i]+w[i])|0;
+      var S0=rr(a,2)^rr(a,13)^rr(a,22), mj=(a&b)^(a&c)^(b&c);
+      var t2=(S0+mj)|0;
+      h=g;g=f;f=e;e=(d+t1)|0;d=c;c=b;b=a;a=(t1+t2)|0;
+    }
+    H[0]=(H[0]+a)|0;H[1]=(H[1]+b)|0;H[2]=(H[2]+c)|0;H[3]=(H[3]+d)|0;
+    H[4]=(H[4]+e)|0;H[5]=(H[5]+f)|0;H[6]=(H[6]+g)|0;H[7]=(H[7]+h)|0;
+  }
+  var out=[];
+  for(i=0;i<8;i++){out.push((H[i]>>>24)&255,(H[i]>>>16)&255,(H[i]>>>8)&255,H[i]&255);}
+  return out;
+}
+/* Auch die Zeichen jenseits der Grundebene (Emoji im Schlüssel) werden
+   richtig zerlegt; sonst käme für denselben Schlüssel je nach Eingabe eine
+   andere Signatur heraus. */
+function utf8(s){
+  var b=[];
+  for(var i=0;i<s.length;i++){
+    var c=s.codePointAt(i);
+    if(c>0xFFFF) i++;
+    if(c<128)b.push(c);
+    else if(c<2048)b.push(192|(c>>6),128|(c&63));
+    else if(c<65536)b.push(224|(c>>12),128|((c>>6)&63),128|(c&63));
+    else b.push(240|(c>>18),128|((c>>12)&63),128|((c>>6)&63),128|(c&63));
+  }
+  return b;
+}
+function hex(b){var s="";for(var i=0;i<b.length;i++)s+=("0"+b[i].toString(16)).slice(-2);return s;}
+function hmac(key,msg){
+  var k=utf8(key);
+  if(k.length>64)k=sha256Bytes(k);
+  while(k.length<64)k.push(0);
+  var ip=[],op=[];
+  for(var i=0;i<64;i++){ip.push(k[i]^0x36);op.push(k[i]^0x5c);}
+  return hex(sha256Bytes(op.concat(sha256Bytes(ip.concat(utf8(msg))))));
+}
+
+/* ============================ QR-Code ============================
+   Version 1 bis 10, Fehlerkorrektur M. Reicht für die kurzen Codes
+   dieser Kasse um ein Vielfaches. */
+function qrMatrix(text, ecl) {
+  ecl = ecl || 'M';
+  var ECB = {
+    L: [[7,1,19,0,0],[10,1,34,0,0],[15,1,55,0,0],[20,1,80,0,0],[26,1,108,0,0],[18,2,68,0,0],[20,2,78,0,0],[24,2,97,0,0],[30,2,116,0,0],[18,2,68,2,69]],
+    M: [[10,1,16,0,0],[16,1,28,0,0],[26,1,44,0,0],[18,2,32,0,0],[24,2,43,0,0],[16,4,27,0,0],[18,4,31,0,0],[22,2,38,2,39],[22,3,36,2,37],[26,4,43,1,44]],
+    Q: [[13,1,13,0,0],[22,1,22,0,0],[18,2,17,0,0],[26,2,24,0,0],[18,2,15,2,16],[24,4,19,0,0],[18,2,14,4,15],[22,4,18,2,19],[20,4,16,4,17],[24,6,19,2,20]],
+    H: [[17,1,9,0,0],[28,1,16,0,0],[22,2,13,0,0],[16,4,9,0,0],[22,2,11,2,12],[28,4,15,0,0],[26,4,13,1,14],[26,4,14,2,15],[24,4,12,4,13],[28,6,15,2,16]]
+  };
+  var ALIGN = [[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50]];
+  var ECBITS = {L:1, M:0, Q:3, H:2};
+
+  var EXP = new Array(512), LOG = new Array(256), x = 1;
+  for (var i = 0; i < 255; i++) { EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 256) x ^= 0x11d; }
+  for (i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+  function mul(a, b) { return (a === 0 || b === 0) ? 0 : EXP[LOG[a] + LOG[b]]; }
+
+  function genPoly(n) {
+    var p = [1];
+    for (var i = 0; i < n; i++) {
+      var q = p.slice(); q.push(0);
+      for (var j = 0; j < p.length; j++) q[j + 1] ^= mul(p[j], EXP[i]);
+      p = q;
+    }
+    return p;
+  }
+  function ecc(data, n) {
+    var g = genPoly(n), res = new Array(n).fill(0);
+    for (var i = 0; i < data.length; i++) {
+      var f = data[i] ^ res[0];
+      res.shift(); res.push(0);
+      for (var j = 0; j < n; j++) res[j] ^= mul(g[j + 1], f);
+    }
+    return res;
+  }
+
+  var bytes = utf8(text), j2;
+
+  var ver = 0;
+  for (var v = 1; v <= 10; v++) {
+    var e = ECB[ecl][v - 1];
+    var total = e[1] * e[2] + e[3] * e[4];
+    var cap = total - 2 - (v >= 10 ? 1 : 0);
+    if (bytes.length <= cap) { ver = v; break; }
+  }
+  if (!ver) throw new Error('Inhalt zu lang');
+
+  var eb = ECB[ecl][ver - 1];
+  var ecPer = eb[0], nb1 = eb[1], dc1 = eb[2], nb2 = eb[3], dc2 = eb[4];
+  var totalData = nb1 * dc1 + nb2 * dc2;
+  var cntBits = ver >= 10 ? 16 : 8;
+
+  var bits = [];
+  function push(val, n) { for (var k = n - 1; k >= 0; k--) bits.push((val >> k) & 1); }
+  push(4, 4);
+  push(bytes.length, cntBits);
+  for (i = 0; i < bytes.length; i++) push(bytes[i], 8);
+  var cap2 = totalData * 8;
+  for (i = 0; i < 4 && bits.length < cap2; i++) bits.push(0);
+  while (bits.length % 8 !== 0) bits.push(0);
+  var dcw = [];
+  for (i = 0; i < bits.length; i += 8) {
+    var b = 0; for (j2 = 0; j2 < 8; j2++) b = (b << 1) | bits[i + j2];
+    dcw.push(b);
+  }
+  var pad = [0xEC, 0x11], pi = 0;
+  while (dcw.length < totalData) { dcw.push(pad[pi % 2]); pi++; }
+
+  var blocks = [], off = 0;
+  for (i = 0; i < nb1; i++) { blocks.push(dcw.slice(off, off + dc1)); off += dc1; }
+  for (i = 0; i < nb2; i++) { blocks.push(dcw.slice(off, off + dc2)); off += dc2; }
+  var eblocks = blocks.map(function (b) { return ecc(b, ecPer); });
+
+  var out = [], maxD = Math.max(dc1, dc2);
+  for (i = 0; i < maxD; i++) for (j2 = 0; j2 < blocks.length; j2++) if (i < blocks[j2].length) out.push(blocks[j2][i]);
+  for (i = 0; i < ecPer; i++) for (j2 = 0; j2 < eblocks.length; j2++) out.push(eblocks[j2][i]);
+
+  var size = 17 + ver * 4;
+  var m = [], res2 = [];
+  for (i = 0; i < size; i++) { m.push(new Array(size).fill(0)); res2.push(new Array(size).fill(0)); }
+
+  function finder(r, c) {
+    for (var dr = -1; dr <= 7; dr++) for (var dc = -1; dc <= 7; dc++) {
+      var rr = r + dr, cc = c + dc;
+      if (rr < 0 || cc < 0 || rr >= size || cc >= size) continue;
+      var on = (dr >= 0 && dr <= 6 && (dc === 0 || dc === 6)) || (dc >= 0 && dc <= 6 && (dr === 0 || dr === 6)) || (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4);
+      m[rr][cc] = on ? 1 : 0; res2[rr][cc] = 1;
+    }
+  }
+  finder(0, 0); finder(0, size - 7); finder(size - 7, 0);
+
+  for (i = 8; i < size - 8; i++) {
+    var t = (i % 2 === 0) ? 1 : 0;
+    m[6][i] = t; res2[6][i] = 1;
+    m[i][6] = t; res2[i][6] = 1;
+  }
+
+  var ap = ALIGN[ver - 1], last = ap.length - 1;
+  for (i = 0; i < ap.length; i++) for (j2 = 0; j2 < ap.length; j2++) {
+    if ((i === 0 && j2 === 0) || (i === 0 && j2 === last) || (i === last && j2 === 0)) continue;
+    var r0 = ap[i], c0 = ap[j2];
+    for (var dr2 = -2; dr2 <= 2; dr2++) for (var dc2 = -2; dc2 <= 2; dc2++) {
+      var on2 = Math.max(Math.abs(dr2), Math.abs(dc2)) !== 1;
+      m[r0 + dr2][c0 + dc2] = on2 ? 1 : 0; res2[r0 + dr2][c0 + dc2] = 1;
+    }
+  }
+
+  m[size - 8][8] = 1; res2[size - 8][8] = 1;
+  for (i = 0; i <= 8; i++) { if (!res2[8][i]) res2[8][i] = 1; if (!res2[i][8]) res2[i][8] = 1; }
+  for (i = 0; i < 8; i++) { res2[8][size - 1 - i] = 1; res2[size - 1 - i][8] = 1; }
+
+  if (ver >= 7) {
+    var rem = ver;
+    for (i = 0; i < 12; i++) rem = ((rem << 1) ^ (((rem >>> 11) & 1) * 0x1F25)) & 0xFFFFFF;
+    var vbits = (ver << 12) | (rem & 0xFFF);
+    for (i = 0; i < 18; i++) {
+      var bit = (vbits >> i) & 1;
+      var rr2 = Math.floor(i / 3), cc2 = i % 3;
+      m[rr2][size - 11 + cc2] = bit; res2[rr2][size - 11 + cc2] = 1;
+      m[size - 11 + cc2][rr2] = bit; res2[size - 11 + cc2][rr2] = 1;
+    }
+  }
+
+  var di = 0, up = true;
+  for (var col = size - 1; col > 0; col -= 2) {
+    if (col === 6) col = 5;
+    for (var k = 0; k < size; k++) {
+      var row = up ? size - 1 - k : k;
+      for (var s = 0; s < 2; s++) {
+        var cc3 = col - s;
+        if (res2[row][cc3]) continue;
+        var bit2 = 0;
+        if (di < out.length * 8) { bit2 = (out[di >> 3] >> (7 - (di & 7))) & 1; }
+        di++;
+        m[row][cc3] = bit2;
+      }
+    }
+    up = !up;
+  }
+
+  function maskFn(k, r, c) {
+    switch (k) {
+      case 0: return (r + c) % 2 === 0;
+      case 1: return r % 2 === 0;
+      case 2: return c % 3 === 0;
+      case 3: return (r + c) % 3 === 0;
+      case 4: return (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0;
+      case 5: return (r * c) % 2 + (r * c) % 3 === 0;
+      case 6: return ((r * c) % 2 + (r * c) % 3) % 2 === 0;
+      case 7: return ((r + c) % 2 + (r * c) % 3) % 2 === 0;
+    }
+  }
+
+  function penalty(g) {
+    var p = 0, i, j, k, run, dark = 0;
+    for (i = 0; i < size; i++) {
+      run = 1;
+      for (j = 1; j < size; j++) {
+        if (g[i][j] === g[i][j - 1]) run++; else { if (run >= 5) p += 3 + (run - 5); run = 1; }
+      }
+      if (run >= 5) p += 3 + (run - 5);
+      run = 1;
+      for (j = 1; j < size; j++) {
+        if (g[j][i] === g[j - 1][i]) run++; else { if (run >= 5) p += 3 + (run - 5); run = 1; }
+      }
+      if (run >= 5) p += 3 + (run - 5);
+    }
+    for (i = 0; i < size - 1; i++) for (j = 0; j < size - 1; j++) {
+      var s2 = g[i][j] + g[i][j + 1] + g[i + 1][j] + g[i + 1][j + 1];
+      if (s2 === 0 || s2 === 4) p += 3;
+    }
+    var pat1 = [1,0,1,1,1,0,1,0,0,0,0], pat2 = [0,0,0,0,1,0,1,1,1,0,1];
+    for (i = 0; i < size; i++) for (j = 0; j <= size - 11; j++) {
+      var ok1 = true, ok2 = true, ok3 = true, ok4 = true;
+      for (k = 0; k < 11; k++) {
+        if (g[i][j + k] !== pat1[k]) ok1 = false;
+        if (g[i][j + k] !== pat2[k]) ok2 = false;
+        if (g[j + k][i] !== pat1[k]) ok3 = false;
+        if (g[j + k][i] !== pat2[k]) ok4 = false;
+      }
+      if (ok1) p += 40; if (ok2) p += 40; if (ok3) p += 40; if (ok4) p += 40;
+    }
+    for (i = 0; i < size; i++) for (j = 0; j < size; j++) dark += g[i][j];
+    var pct = dark * 100 / (size * size);
+    p += Math.floor(Math.abs(pct - 50) / 5) * 10;
+    return p;
+  }
+
+  var best = null, bestP = Infinity;
+  for (var mk = 0; mk < 8; mk++) {
+    var g2 = m.map(function (r) { return r.slice(); });
+    for (i = 0; i < size; i++) for (j2 = 0; j2 < size; j2++) if (!res2[i][j2] && maskFn(mk, i, j2)) g2[i][j2] ^= 1;
+    var fmt = (ECBITS[ecl] << 3) | mk, r3 = fmt;
+    for (i = 0; i < 10; i++) r3 = ((r3 << 1) ^ (((r3 >>> 9) & 1) * 0x537)) & 0xFFFFF;
+    var fbits = (((fmt << 10) | (r3 & 0x3FF)) ^ 0x5412) & 0x7FFF;
+    for (i = 0; i <= 5; i++) g2[i][8] = (fbits >> i) & 1;
+    g2[7][8] = (fbits >> 6) & 1;
+    g2[8][8] = (fbits >> 7) & 1;
+    g2[8][7] = (fbits >> 8) & 1;
+    for (i = 9; i <= 14; i++) g2[8][14 - i] = (fbits >> i) & 1;
+    for (i = 0; i <= 7; i++) g2[8][size - 1 - i] = (fbits >> i) & 1;
+    for (i = 8; i <= 14; i++) g2[size - 15 + i][8] = (fbits >> i) & 1;
+    g2[size - 8][8] = 1;
+    var p2 = penalty(g2);
+    if (p2 < bestP) { bestP = p2; best = g2; }
+  }
+  return best;
+}
+
+/* Die Größe bestimmt das Blatt, nicht der Code: das SVG füllt seinen
+   Platz. So bleibt der Ausdruck bei jeder Auflösung scharf. */
+function qrSvg(text){
+  var m=qrMatrix(text,'M'), n=m.length, q=2, tot=n+q*2, d="";
+  for(var i=0;i<n;i++)for(var j=0;j<n;j++) if(m[i][j]) d+="M"+(j+q)+" "+(i+q)+"h1v1h-1z";
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+tot+' '+tot+'" '+
+    'preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges">'+
+    '<rect width="'+tot+'" height="'+tot+'" fill="#fff"/><path d="'+d+'" fill="#000"/></svg>';
+}
+
+/* ============================= Daten =============================
+   Der Schlüssel des Speichers bleibt v1: vorhandene Kassen sollen ihre
+   Daten behalten. Was sich am Format geändert hat, richtet migriere()
+   beim Laden gerade. */
+var KEY="ticketkasse.v1";
+var db=leereDaten();
+var nurImSpeicher=false;
+
+function leereDaten(){
+  return {
+    events:[], kats:[], tickets:[], nummern:{},
+    veranstalter:{name:"Fering Ferian e.V.", zusatz:"Heimatpflege auf Föhr"},
+    schluessel:zufallsSchluessel(), aktiv:null, layout:"mehrfach",
+  };
+}
+
+/* Der Schlüssel entscheidet, ob eine selbstgemalte Karte auffliegt.
+   Math.random ist dafür zu vorhersehbar; wo es geht, fragt die Kasse
+   den Zufallsgenerator des Browsers. */
+function zufallsSchluessel(){
+  var a="abcdefghijkmnpqrstuvwxyz23456789", s="", i;
+  if(window.crypto&&window.crypto.getRandomValues){
+    var r=new Uint8Array(24); window.crypto.getRandomValues(r);
+    for(i=0;i<24;i++) s+=a[r[i]%a.length];
+    return s;
+  }
+  for(i=0;i<24;i++) s+=a[Math.floor(Math.random()*a.length)];
+  return s;
+}
+
+/* Ältere Stände tragen englische Feldnamen, Preise als Kommazahl und den
+   Zustand "eingelöst" mit Umlaut. Ein Umlaut im Vergleich ist eine
+   Fehlerquelle, sobald eine Datei einmal anders kodiert durch die Welt
+   geht; gespeichert wird deshalb "eingeloest" und erst zur Anzeige
+   ausgeschrieben. Die Signaturen bleiben unberührt: gedruckte Karten
+   müssen nach der Umstellung weiter gelten. */
+function migriere(d){
+  if(!d||typeof d!=="object") return leereDaten();
+  var neu=leereDaten();
+  neu.events = Array.isArray(d.events)? d.events : [];
+  neu.kats   = Array.isArray(d.kats)? d.kats : (Array.isArray(d.cats)? d.cats : []);
+  neu.tickets= Array.isArray(d.tickets)? d.tickets : [];
+  neu.nummern= (d.nummern&&typeof d.nummern==="object") ? d.nummern
+             : ((d.seq&&typeof d.seq==="object") ? d.seq : {});
+  if(d.veranstalter&&d.veranstalter.name) neu.veranstalter=d.veranstalter;
+  if(typeof d.schluessel==="string"&&d.schluessel) neu.schluessel=d.schluessel;
+  else if(typeof d.secret==="string"&&d.secret) neu.schluessel=d.secret;
+  neu.aktiv = d.aktiv || d.activeEvent || null;
+  neu.layout = (d.layout==="einzeln"||d.layout==="single") ? "einzeln" : "mehrfach";
+
+  neu.events.forEach(function(e){
+    if(!e.kuerzel && e.code){ e.kuerzel=e.code; delete e.code; }
+    if(!e.datum && e.date){ e.datum=e.date; delete e.date; }
+    if(e.ort===undefined) e.ort="";
+  });
+  neu.kats.forEach(function(k){
+    if(typeof k.cent!=="number") k.cent=Math.round(Number(k.price||0)*100);
+    delete k.price;
+  });
+  neu.tickets.forEach(function(t){
+    if(typeof t.cent!=="number") t.cent=Math.round(Number(t.price||0)*100);
+    delete t.price;
+    if(!t.kuerzel && t.ev){ t.kuerzel=t.ev; delete t.ev; }
+    if(!t.nummer && t.num){ t.nummer=t.num; delete t.num; }
+    if(t.kat===undefined && t.cat!==undefined){ t.kat=t.cat; delete t.cat; }
+    if(t.gast===undefined && t.guest!==undefined){ t.gast=t.guest; delete t.guest; }
+    if(t.erstellt===undefined && t.ts!==undefined){ t.erstellt=t.ts; delete t.ts; }
+    if(t.eingeloestAm===undefined && t.usedAt!==undefined){ t.eingeloestAm=t.usedAt; delete t.usedAt; }
+    if(t.status==="eingelöst") t.status="eingeloest";
+    if(!LAGE[t.status]) t.status="offen";
+  });
+  return neu;
+}
+
+function laden(){
+  var roh=null;
+  try{ roh=localStorage.getItem(KEY); }catch(e){ nurImSpeicher=true; }
+  if(roh){ try{ db=migriere(JSON.parse(roh)); }catch(e){ db=leereDaten(); } }
+  else db=leereDaten();
+}
+function sichern(){
+  try{ localStorage.setItem(KEY,JSON.stringify(db)); }
+  catch(e){ nurImSpeicher=true; speicherWarnung(); }
+}
+function speicherWarnung(){
+  var w=$("speicherHinweis");
+  w.classList.remove("hide");
+  w.textContent="Dieses Gerät speichert gerade nicht dauerhaft. Exportiere die Daten, "+
+                "bevor du die Seite schließt.";
+}
+
+/* ============================ Werkzeug ============================ */
+function $(id){return document.getElementById(id);}
+function esc(s){
+  return String(s===null||s===undefined?"":s).replace(/[&<>"']/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+
+/* Gerechnet wird in ganzen Cent — genau wie im Vereinsmanager. Über
+   hundert Karten hinweg geht eine Kommazahl sonst um Cents daneben. */
+var GELD=new Intl.NumberFormat("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2});
+function eur(c){ return GELD.format((Number(c)||0)/100); }
+function centAus(text){
+  if(text===null||text===undefined||text==="") return NaN;
+  var zahl=Number(String(text).trim().replace(/\s/g,"")
+             .replace(/\.(?=\d{3}(?:\D|$))/g,"").replace(",","."));
+  if(!Number.isFinite(zahl)) return NaN;
+  return Math.round(zahl*100);
+}
+
+var WOCHENTAG=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Sonnabend"];
+function datumLang(iso){
+  if(!iso) return "";
+  var p=String(iso).split("-");
+  if(p.length!==3) return iso;
+  var d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]));
+  if(isNaN(d.getTime())) return iso;
+  return WOCHENTAG[d.getDay()]+", "+p[2]+"."+p[1]+"."+p[0];
+}
+function datumKurz(iso){
+  if(!iso) return "";
+  var p=String(iso).split("-");
+  return p.length===3 ? p[2]+"."+p[1]+"."+p[0] : iso;
+}
+/* Ein einziges Format für alle Zeitangaben: 12.09.2026, 19:24 Uhr. */
+function zeitpunkt(ts){
+  var d=new Date(ts);
+  if(isNaN(d.getTime())) return "";
+  function zwei(n){return (n<10?"0":"")+n;}
+  return zwei(d.getDate())+"."+zwei(d.getMonth()+1)+"."+d.getFullYear()+", "+
+         zwei(d.getHours())+":"+zwei(d.getMinutes())+" Uhr";
+}
+function uhrzeit(ts){
+  var d=new Date(ts);
+  if(isNaN(d.getTime())) return "";
+  function zwei(n){return (n<10?"0":"")+n;}
+  return zwei(d.getHours())+":"+zwei(d.getMinutes());
+}
+
+function melden(t){
+  var e=$("meldung"); e.textContent=t; e.classList.add("an");
+  clearTimeout(e._z); e._z=setTimeout(function(){e.classList.remove("an");},2000);
+}
+
+var LAGE={offen:"offen", eingeloest:"eingelöst", storniert:"storniert"};
+var MARKER={offen:"m-offen", eingeloest:"m-ein", storniert:"m-storno"};
+
+function aktivesEvent(){
+  if(!db.aktiv) return null;
+  for(var i=0;i<db.events.length;i++) if(db.events[i].id===db.aktiv) return db.events[i];
+  return null;
+}
+function eventNachKuerzel(k){
+  for(var i=0;i<db.events.length;i++) if(db.events[i].kuerzel===k) return db.events[i];
+  return null;
+}
+function katNachId(id){
+  for(var i=0;i<db.kats.length;i++) if(db.kats[i].id===id) return db.kats[i];
+  return null;
+}
+function signatur(kuerzel,nummer){ return hmac(db.schluessel, kuerzel+"|"+nummer).slice(0,8); }
+function ticketCode(t){ return t.kuerzel+"-"+t.nummer+"-"+t.sig; }
+
+/* ============================== Kasse ============================== */
+var korb={};
+/* Erdige Töne aus der Hausfarbenfamilie — Grün, Messing, Ziegel und ihre
+   Nachbarn. Ein greller Farbring wäre schneller zu unterscheiden, würde
+   aber neben dem Rest des Programms wie ein Fremdkörper stehen. */
+var KACHELFARBEN=["#1E5C3E","#80621C","#93382B","#35594A","#A07A2C","#4E6B3A"];
+
+function zeichneKacheln(){
+  var box=$("kacheln"); box.innerHTML="";
+  $("keineKategorien").classList.toggle("hide", db.kats.length>0);
+  db.kats.forEach(function(k,i){
+    var b=document.createElement("button");
+    b.className="kachel"; b.type="button";
+    var q=korb[k.id]||0;
+    b.innerHTML='<span class="balken" style="background:'+KACHELFARBEN[i%KACHELFARBEN.length]+'"></span>'+
+      '<span class="bez">'+esc(k.name)+'</span>'+
+      '<span class="preis">'+eur(k.cent)+' &euro;</span>'+
+      (q?'<span class="zahl">'+q+'</span>'+
+         '<span class="weniger" data-weniger="'+esc(k.id)+'" title="Eine weniger">&minus;</span>':'');
+    b.addEventListener("click",function(e){
+      var w=e.target.getAttribute&&e.target.getAttribute("data-weniger");
+      if(w){ korb[w]=Math.max(0,(korb[w]||0)-1); if(!korb[w]) delete korb[w]; }
+      else korb[k.id]=(korb[k.id]||0)+1;
+      zeichneKacheln(); zeichneBuchung();
+    });
+    box.appendChild(b);
+  });
+}
+
+function zeichneBuchung(){
+  var h="", summe=0, anzahl=0;
+  db.kats.forEach(function(k){
+    var q=korb[k.id]||0; if(!q) return;
+    anzahl+=q; summe+=q*k.cent;
+    h+='<div class="buchungszeile"><span>'+q+' &times; '+esc(k.name)+'</span>'+
+       '<span class="mono">'+eur(q*k.cent)+' &euro;</span></div>';
+  });
+  if(!anzahl) h='<div class="muted">Nichts ausgewählt.</div>';
+  else h+='<div class="summe"><span>Summe</span><span class="mono">'+eur(summe)+' &euro;</span></div>';
+  $("buchung").innerHTML=h;
+
+  var ev=aktivesEvent();
+  $("btnDrucken").disabled = (anzahl===0 || !ev);
+  $("btnDrucken").textContent = anzahl
+    ? (anzahl===1 ? "1 Ticket erzeugen und drucken" : anzahl+" Tickets erzeugen und drucken")
+    : "Tickets erzeugen und drucken";
+
+  var hin=$("kasseHinweis");
+  if(!ev){ hin.textContent="Keine Veranstaltung aktiv. Lege sie unter Einstellungen an.";
+           hin.classList.remove("hide"); }
+  else hin.classList.add("hide");
+}
+
+function zeichneLayoutWahl(){
+  var kn=$("wahlLayout").querySelectorAll("button");
+  for(var i=0;i<kn.length;i++)
+    kn[i].setAttribute("aria-pressed", kn[i].getAttribute("data-layout")===db.layout ? "true":"false");
+}
+
+function ticketsErzeugen(){
+  var ev=aktivesEvent(); if(!ev) return;
+  var gast=$("gast").value.trim(), neue=[];
+  db.kats.forEach(function(k){
+    var q=korb[k.id]||0;
+    for(var i=0;i<q;i++){
+      db.nummern[ev.id]=(db.nummern[ev.id]||0)+1;
+      var nummer=String(db.nummern[ev.id]).padStart(4,"0");
+      neue.push({
+        evId:ev.id, kuerzel:ev.kuerzel, nummer:nummer, sig:signatur(ev.kuerzel,nummer),
+        kat:k.name, cent:k.cent, gast:gast, status:"offen", erstellt:Date.now(),
+      });
+    }
+  });
+  if(!neue.length) return;
+  db.tickets=db.tickets.concat(neue);
+  korb={}; $("gast").value="";
+  sichern();
+  zeichneKacheln(); zeichneBuchung(); zeichneListe(); zeichneZahlen();
+  drucken(neue);
+}
+
+/* ============================= Ausdruck ============================= */
+function drucken(liste){
+  var bogen=$("bogen");
+  bogen.className="bogen "+(db.layout==="einzeln"?"einzeln":"mehrfach");
+  var v=db.veranstalter||{};
+
+  bogen.innerHTML=liste.map(function(t){
+    var ev=null;
+    for(var i=0;i<db.events.length;i++) if(db.events[i].id===t.evId) ev=db.events[i];
+    var name=ev?ev.name:t.kuerzel;
+    var wann=ev&&ev.datum?datumLang(ev.datum):"";
+    var wo=ev&&ev.ort?ev.ort:"";
+    return '<article class="ticket">'+
+      '<div class="qr">'+qrSvg(ticketCode(t))+'</div>'+
+      '<div class="daten">'+
+        '<div class="veranstalter">'+esc(v.name||"")+
+          (v.zusatz?'<span>'+esc(v.zusatz)+'</span>':'')+'</div>'+
+        '<div class="anlass">'+esc(name)+'</div>'+
+        (wann?'<div class="wann">'+esc(wann)+'</div>':'')+
+        (wo?'<div class="wo">'+esc(wo)+'</div>':'')+
+        '<div class="kategorie">'+esc(t.kat)+'</div>'+
+        (t.gast?'<div class="gast">'+esc(t.gast)+'</div>':'')+
+        '<div class="preis">'+eur(t.cent)+' &euro;</div>'+
+        '<div class="code">'+esc(ticketCode(t))+'</div>'+
+      '</div>'+
+      '<div class="abriss">'+esc(t.kat)+' &middot; '+esc(t.nummer)+'</div>'+
+    '</article>';
+  }).join("");
+
+  setTimeout(function(){ window.print(); },80);
+}
+
+/* Nach dem Druck wird der Bogen geleert. Sonst käme beim nächsten
+   Strg+P noch einmal der alte Stapel aus dem Drucker. */
+window.addEventListener("afterprint",function(){ $("bogen").innerHTML=""; });
+
+/* ============================== Einlass ============================== */
+var pruefungen=[];
+
+function pruefe(roh){
+  var code=String(roh||"").trim().toUpperCase();
+  var feld=$("befund");
+  function befund(art,titel,dazu){
+    feld.className="befund "+art;
+    feld.innerHTML=esc(titel)+(dazu?'<div class="dazu">'+esc(dazu)+'</div>':"");
+    pruefungen.unshift({zeit:Date.now(), code:code, gut:art==="b-ja", text:titel});
+    pruefungen=pruefungen.slice(0,12);
+    zeichnePruefLog();
+  }
+
+  if(!code){ befund("b-nein","Kein Code","Das Feld ist leer."); return; }
+  var teile=code.split("-");
+  if(teile.length!==3){ befund("b-nein","Unbekanntes Format",code); return; }
+
+  var ev=eventNachKuerzel(teile[0]);
+  if(!ev){ befund("b-nein","Fremde Veranstaltung",
+                  "Das Kürzel "+teile[0]+" gehört zu keiner Veranstaltung dieser Kasse."); return; }
+  if(signatur(ev.kuerzel,teile[1])!==teile[2].toLowerCase()){
+    befund("b-nein","Gefälscht","Die Signatur stimmt nicht."); return;
+  }
+
+  var t=null;
+  for(var i=0;i<db.tickets.length;i++){
+    if(db.tickets[i].evId===ev.id && db.tickets[i].nummer===teile[1]){ t=db.tickets[i]; break; }
+  }
+  if(!t){ befund("b-nein","Nicht gefunden",
+                 "Ticket "+teile[1]+" ist auf diesem Gerät nicht gespeichert."); return; }
+  if(t.status==="storniert"){
+    befund("b-nein","Storniert", t.kat+(t.gast?" · "+t.gast:"")); return;
+  }
+  if(t.status==="eingeloest"){
+    befund("b-nein","Bereits eingelöst",
+           t.kat+" · eingelassen "+zeitpunkt(t.eingeloestAm||Date.now())); return;
+  }
+
+  t.status="eingeloest"; t.eingeloestAm=Date.now(); sichern();
+  befund("b-ja","Gültig", t.kat+(t.gast?" · "+t.gast:"")+" · "+ev.name);
+  zeichneListe(); zeichneZahlen();
+}
+
+function zeichnePruefLog(){
+  if(!pruefungen.length){
+    $("pruefLog").innerHTML='<span class="muted">Noch keine Prüfungen.</span>'; return;
+  }
+  $("pruefLog").innerHTML=pruefungen.map(function(p){
+    return '<div class="zeile">'+
+      '<span class="mono grow" style="font-size:13px">'+esc(p.code)+'</span>'+
+      '<span class="marker '+(p.gut?"m-ein":"m-storno")+'">'+esc(p.text)+'</span>'+
+      '<span class="muted">'+uhrzeit(p.zeit)+'</span></div>';
+  }).join("");
+}
+
+var strom=null, leser=null, liest=false, letzterTreffer=0;
+function kameraUmschalten(){
+  if(liest){ kameraAus(); return; }
+  var hin=$("kameraHinweis"); hin.classList.add("hide");
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    hin.textContent="Diese Ansicht darf nicht auf die Kamera zugreifen. Das gelingt erst, "+
+                    "wenn die Datei über eine https-Adresse geöffnet wird. Bis dahin den Code eintippen.";
+    hin.classList.remove("hide"); return;
+  }
+  if(!("BarcodeDetector" in window)){
+    hin.textContent="Dieser Browser bringt keinen eingebauten QR-Leser mit. Chrome auf Android kann es. "+
+                    "Bis dahin den Code eintippen.";
+    hin.classList.remove("hide"); return;
+  }
+  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}}).then(function(s){
+    strom=s;
+    var v=$("video"); v.srcObject=s; v.classList.remove("hide"); v.play();
+    leser=new window.BarcodeDetector({formats:["qr_code"]});
+    liest=true; $("btnKamera").textContent="Kamera aus"; takt();
+  }).catch(function(e){
+    hin.textContent="Die Kamera ist nicht freigegeben ("+e.name+"). Den Code bitte eintippen.";
+    hin.classList.remove("hide");
+  });
+}
+function kameraAus(){
+  liest=false;
+  if(strom){ strom.getTracks().forEach(function(t){t.stop();}); strom=null; }
+  $("video").classList.add("hide"); $("btnKamera").textContent="Kamera";
+}
+function takt(){
+  if(!liest) return;
+  leser.detect($("video")).then(function(codes){
+    if(codes.length && Date.now()-letzterTreffer>1200){
+      letzterTreffer=Date.now();
+      $("scanFeld").value=codes[0].rawValue;
+      pruefe(codes[0].rawValue);
+      if(navigator.vibrate) navigator.vibrate(60);
+    }
+  }).catch(function(){}).then(function(){ if(liest) setTimeout(takt,250); });
+}
+
+/* ============================== Listen ============================== */
+function zeichneListe(){
+  var ev=aktivesEvent(), f=$("suche").value.trim().toLowerCase();
+  var liste=db.tickets.filter(function(t){ return ev && t.evId===ev.id; });
+  if(f) liste=liste.filter(function(t){
+    return (ticketCode(t)+" "+t.kat+" "+(t.gast||"")).toLowerCase().indexOf(f)>=0;
+  });
+  liste=liste.slice().reverse().slice(0,300);
+
+  if(!liste.length){ $("ticketListe").innerHTML='<div class="muted">Keine Tickets.</div>'; return; }
+  $("ticketListe").innerHTML=liste.map(function(t){
+    return '<div class="zeile">'+
+      '<span class="grow"><span class="mono" style="font-size:13px">'+esc(ticketCode(t))+'</span><br>'+
+      '<span class="muted">'+esc(t.kat)+' · '+eur(t.cent)+' €'+
+      (t.gast?' · '+esc(t.gast):'')+
+      (t.status==="eingeloest"&&t.eingeloestAm?' · eingelassen '+uhrzeit(t.eingeloestAm)+' Uhr':'')+
+      '</span></span>'+
+      '<span class="marker '+MARKER[t.status]+'">'+LAGE[t.status]+'</span>'+
+      (t.status==="offen"
+        ? '<button class="knopf klein warn" data-storno="'+esc(t.evId)+'|'+esc(t.nummer)+'">Storno</button>'
+        : '')+
+    '</div>';
+  }).join("");
+}
+
+function zeichneZahlen(){
+  var ev=aktivesEvent();
+  var liste=db.tickets.filter(function(t){ return ev && t.evId===ev.id && t.status!=="storniert"; });
+  var ein=liste.filter(function(t){return t.status==="eingeloest";}).length;
+  var summe=liste.reduce(function(a,t){return a+t.cent;},0);
+  $("zSold").textContent=liste.length;
+  $("zEin").textContent=ein;
+  $("zSumme").textContent=eur(summe);
+
+  var nach={};
+  liste.forEach(function(t){
+    if(!nach[t.kat]) nach[t.kat]={n:0,cent:0,ein:0};
+    nach[t.kat].n++; nach[t.kat].cent+=t.cent;
+    if(t.status==="eingeloest") nach[t.kat].ein++;
+  });
+  var schl=Object.keys(nach);
+  $("nachKategorie").innerHTML = schl.length
+    ? '<tr><th>Kategorie</th><th class="n">Stück</th><th class="n">eingelöst</th><th class="n">Euro</th></tr>'+
+      schl.map(function(k){
+        return '<tr><td>'+esc(k)+'</td><td class="n">'+nach[k].n+'</td>'+
+               '<td class="n">'+nach[k].ein+'</td>'+
+               '<td class="n mono">'+eur(nach[k].cent)+'</td></tr>';
+      }).join("")
+    : '<tr><td class="muted">Noch nichts verkauft.</td></tr>';
+}
+
+/* =========================== Einstellungen =========================== */
+function zeichneEvents(){
+  var s=$("evSel");
+  s.innerHTML = db.events.length
+    ? db.events.map(function(e){
+        return '<option value="'+esc(e.id)+'"'+(e.id===db.aktiv?" selected":"")+'>'+
+               esc(e.name)+' ('+esc(e.kuerzel)+')</option>';
+      }).join("")
+    : '<option value="">Keine Veranstaltung</option>';
+
+  var ev=aktivesEvent();
+  $("kopfAnlass").textContent = ev ? ev.name : "Keine Veranstaltung";
+  $("kopfZusatz").textContent = ev
+    ? [datumKurz(ev.datum), ev.ort, ev.kuerzel].filter(Boolean).join(" · ")
+    : "Unter Einstellungen anlegen";
+
+  $("evListe").innerHTML = db.events.length
+    ? db.events.map(function(e){
+        return '<div class="zeile">'+
+          '<span class="grow"><b>'+esc(e.name)+'</b><br>'+
+          '<span class="muted"><span class="mono">'+esc(e.kuerzel)+'</span> · '+
+          esc(e.datum?datumKurz(e.datum):"ohne Datum")+(e.ort?' · '+esc(e.ort):'')+'</span></span>'+
+          (e.id===db.aktiv
+            ? '<span class="marker m-ein">aktiv</span>'
+            : '<button class="knopf klein" data-aktiv="'+esc(e.id)+'">aktivieren</button>')+
+          '<button class="knopf klein warn" data-evweg="'+esc(e.id)+'">Löschen</button></div>';
+      }).join("")
+    : '<div class="muted">Noch keine Veranstaltung angelegt.</div>';
+}
+
+function zeichneKats(){
+  $("katListe").innerHTML = db.kats.length
+    ? db.kats.map(function(k,i){
+        return '<div class="zeile">'+
+          '<span class="grow"><b>'+esc(k.name)+'</b> '+
+          '<span class="muted mono">'+eur(k.cent)+' €</span></span>'+
+          '<button class="knopf klein" data-hoch="'+esc(k.id)+'"'+(i===0?" disabled":"")+'>&uarr;</button>'+
+          '<button class="knopf klein" data-runter="'+esc(k.id)+'"'+
+            (i===db.kats.length-1?" disabled":"")+'>&darr;</button>'+
+          '<button class="knopf klein warn" data-katweg="'+esc(k.id)+'">Löschen</button></div>';
+      }).join("")
+    : '<div class="muted">Noch keine Kategorie angelegt.</div>';
+}
+
+function allesZeichnen(){
+  zeichneEvents(); zeichneKats(); zeichneKacheln(); zeichneBuchung();
+  zeichneLayoutWahl(); zeichneListe(); zeichneZahlen();
+}
+
+/* ============================ Verdrahtung ============================ */
+function reiterZeigen(name){
+  ["kasse","einlass","tickets","einstellungen"].forEach(function(r){
+    $("reiter-"+r).classList.toggle("hide", r!==name);
+  });
+  document.querySelectorAll("nav button").forEach(function(b){
+    b.setAttribute("aria-current", b.getAttribute("data-reiter")===name ? "true":"false");
+  });
+  if(name!=="einlass") kameraAus();
+  if(name==="einlass") $("scanFeld").focus();
+  if(name==="tickets"){ zeichneListe(); zeichneZahlen(); }
+}
+
+function start(){
+  laden();
+  if(nurImSpeicher) speicherWarnung();
+  if(!db.aktiv && db.events.length) db.aktiv=db.events[0].id;
+
+  $("version").textContent=VERSION;
+  $("schluessel").value=db.schluessel;
+  $("vName").value=db.veranstalter.name||"";
+  $("vZusatz").value=db.veranstalter.zusatz||"";
+  allesZeichnen();
+  zeichnePruefLog();
+
+  document.querySelectorAll("nav button").forEach(function(b){
+    b.addEventListener("click",function(){ reiterZeigen(b.getAttribute("data-reiter")); });
+  });
+
+  $("evSel").addEventListener("change",function(){
+    db.aktiv=this.value||null; korb={}; sichern(); allesZeichnen();
+  });
+
+  /* ---- Kasse ---- */
+  $("btnLeeren").addEventListener("click",function(){
+    korb={}; $("gast").value=""; zeichneKacheln(); zeichneBuchung();
+  });
+  $("wahlLayout").addEventListener("click",function(e){
+    var l=e.target.getAttribute&&e.target.getAttribute("data-layout");
+    if(!l) return;
+    db.layout=l; sichern(); zeichneLayoutWahl();
+  });
+  $("btnDrucken").addEventListener("click",ticketsErzeugen);
+
+  /* ---- Einlass ---- */
+  $("btnPruefen").addEventListener("click",function(){
+    pruefe($("scanFeld").value); $("scanFeld").select();
+  });
+  $("scanFeld").addEventListener("keydown",function(e){
+    if(e.key==="Enter"){ pruefe(this.value); this.select(); }
+  });
+  $("btnKamera").addEventListener("click",kameraUmschalten);
+
+  /* ---- Tickets ---- */
+  $("suche").addEventListener("input",zeichneListe);
+  $("ticketListe").addEventListener("click",function(e){
+    var v=e.target.getAttribute&&e.target.getAttribute("data-storno");
+    if(!v) return;
+    var teile=v.split("|"), evId=teile[0], nummer=teile[1];
+    for(var i=0;i<db.tickets.length;i++){
+      var t=db.tickets[i];
+      if(t.evId===evId && t.nummer===nummer && t.status==="offen"){ t.status="storniert"; break; }
+    }
+    sichern(); zeichneListe(); zeichneZahlen(); melden("Ticket storniert");
+  });
+  $("btnNachdruck").addEventListener("click",function(){
+    var ev=aktivesEvent();
+    if(!ev){ melden("Keine Veranstaltung aktiv"); return; }
+    var offen=db.tickets.filter(function(t){ return t.evId===ev.id && t.status==="offen"; });
+    if(!offen.length){ melden("Keine offenen Tickets"); return; }
+    drucken(offen);
+  });
+
+  /* ---- Veranstaltungen ---- */
+  $("btnEvNeu").addEventListener("click",function(){
+    var name=$("evName").value.trim(), datum=$("evDatum").value,
+        kuerzel=$("evKuerzel").value.trim().toUpperCase(), ort=$("evOrt").value.trim();
+    var f=$("evFehler");
+    function fehler(text){ f.textContent=text; f.classList.remove("hide"); }
+    if(!name||!kuerzel){ fehler("Name und Kürzel werden gebraucht."); return; }
+    if(!/^[A-Z0-9]{2,6}$/.test(kuerzel)){
+      fehler("Das Kürzel besteht aus zwei bis sechs Buchstaben oder Ziffern, ohne Bindestrich."); return;
+    }
+    if(eventNachKuerzel(kuerzel)){ fehler("Dieses Kürzel ist schon vergeben."); return; }
+    f.classList.add("hide");
+
+    var id="e"+Date.now();
+    db.events.push({id:id,name:name,datum:datum,kuerzel:kuerzel,ort:ort});
+    db.aktiv=id; korb={}; sichern();
+    $("evName").value=""; $("evKuerzel").value=""; $("evDatum").value=""; $("evOrt").value="";
+    allesZeichnen(); melden("Veranstaltung angelegt");
+  });
+
+  $("evListe").addEventListener("click",function(e){
+    var an=e.target.getAttribute&&e.target.getAttribute("data-aktiv");
+    var weg=e.target.getAttribute&&e.target.getAttribute("data-evweg");
+    if(an){ db.aktiv=an; korb={}; sichern(); allesZeichnen(); }
+    if(weg){
+      var zahl=db.tickets.filter(function(t){return t.evId===weg;}).length;
+      if(zahl && !confirm("Zu dieser Veranstaltung gibt es "+zahl+
+          (zahl===1?" Ticket":" Tickets")+". Mit der Veranstaltung wird auch das gelöscht. Fortfahren?"))
+        return;
+      db.events=db.events.filter(function(x){return x.id!==weg;});
+      db.tickets=db.tickets.filter(function(t){return t.evId!==weg;});
+      /* Auch der Nummernstand muss weg, sonst zählt eine gleichnamige
+         Veranstaltung später an alter Stelle weiter. */
+      delete db.nummern[weg];
+      if(db.aktiv===weg) db.aktiv=db.events.length?db.events[0].id:null;
+      korb={}; sichern(); allesZeichnen();
+    }
+  });
+
+  /* ---- Kategorien ---- */
+  $("btnKatNeu").addEventListener("click",function(){
+    var name=$("katName").value.trim(), c=centAus($("katPreis").value);
+    var f=$("katFehler");
+    if(!name || !Number.isFinite(c) || c<0){
+      f.textContent="Bezeichnung und Preis werden gebraucht."; f.classList.remove("hide"); return;
+    }
+    f.classList.add("hide");
+    db.kats.push({id:"k"+Date.now()+Math.floor(Math.random()*99), name:name, cent:c});
+    sichern(); $("katName").value=""; $("katPreis").value="";
+    zeichneKats(); zeichneKacheln(); zeichneBuchung(); melden("Kategorie angelegt");
+  });
+
+  $("katListe").addEventListener("click",function(e){
+    var z=e.target,
+        hoch=z.getAttribute&&z.getAttribute("data-hoch"),
+        runter=z.getAttribute&&z.getAttribute("data-runter"),
+        weg=z.getAttribute&&z.getAttribute("data-katweg");
+    function stelle(id){ for(var i=0;i<db.kats.length;i++) if(db.kats[i].id===id) return i; return -1; }
+    if(hoch){ var i=stelle(hoch); if(i>0){ var a=db.kats[i]; db.kats[i]=db.kats[i-1]; db.kats[i-1]=a; } }
+    if(runter){ var j=stelle(runter);
+      if(j>=0&&j<db.kats.length-1){ var b=db.kats[j]; db.kats[j]=db.kats[j+1]; db.kats[j+1]=b; } }
+    if(weg){ db.kats=db.kats.filter(function(k){return k.id!==weg;}); delete korb[weg]; }
+    if(hoch||runter||weg){ sichern(); zeichneKats(); zeichneKacheln(); zeichneBuchung(); }
+  });
+
+  /* ---- Veranstalter ---- */
+  $("btnVeranstalter").addEventListener("click",function(){
+    db.veranstalter={name:$("vName").value.trim(), zusatz:$("vZusatz").value.trim()};
+    sichern(); melden("Veranstalter gespeichert");
+  });
+
+  /* ---- Sicherung ---- */
+  $("btnExport").addEventListener("click",function(){
+    var blob=new Blob([JSON.stringify(db,null,1)],{type:"application/json"});
+    var a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="ticketkasse-"+new Date().toISOString().slice(0,10)+".json";
+    a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
+  });
+  $("btnImport").addEventListener("click",function(){ $("dateiEin").click(); });
+  $("dateiEin").addEventListener("change",function(){
+    var f=this.files[0]; this.value=""; if(!f) return;
+    var r=new FileReader();
+    r.onload=function(){
+      var gelesen;
+      try{ gelesen=JSON.parse(r.result); }
+      catch(e){ alert("Die Datei ließ sich nicht lesen."); return; }
+      if(!gelesen || !Array.isArray(gelesen.tickets) || !Array.isArray(gelesen.events)){
+        alert("Das ist keine Sicherung der Ticketkasse."); return;
+      }
+      if(!confirm("Die vorhandenen Daten werden ersetzt. Fortfahren?")) return;
+      db=migriere(gelesen);
+      if(!db.aktiv && db.events.length) db.aktiv=db.events[0].id;
+      korb={}; pruefungen=[]; sichern();
+      $("schluessel").value=db.schluessel;
+      $("vName").value=db.veranstalter.name||"";
+      $("vZusatz").value=db.veranstalter.zusatz||"";
+      allesZeichnen(); zeichnePruefLog(); melden("Daten geladen");
+    };
+    r.readAsText(f);
+  });
+
+  /* ---- Schlüssel ---- */
+  $("btnSchluessel").addEventListener("click",function(){
+    var v=$("schluessel").value.trim();
+    if(v.length<8){ alert("Der Schlüssel sollte mindestens acht Zeichen haben."); return; }
+    if(v===db.schluessel){ melden("Der Schlüssel ist unverändert"); return; }
+    if(db.tickets.length &&
+       !confirm("Alle bisher gedruckten Tickets werden dadurch ungültig. Fortfahren?")) return;
+    db.schluessel=v; sichern(); melden("Schlüssel gespeichert");
+  });
+
+  /* ---- Zurücksetzen ---- */
+  $("btnLoeschen").addEventListener("click",function(){
+    if(!confirm("Wirklich alle Veranstaltungen, Kategorien und Tickets löschen?")) return;
+    var v=db.veranstalter;
+    db=leereDaten(); db.veranstalter=v;
+    korb={}; pruefungen=[]; sichern();
+    $("schluessel").value=db.schluessel;
+    allesZeichnen(); zeichnePruefLog(); melden("Alle Daten gelöscht");
+  });
+}
+
+start();
+</script>
+</body>
+</html>
