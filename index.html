@@ -147,29 +147,41 @@ label.feld>span,.feldTitel{display:block;font-size:11px;text-transform:uppercase
 .wahl button:last-child{border-radius:0 var(--radius) var(--radius) 0;border-left:0}
 .wahl button[aria-pressed="true"]{background:var(--watt);color:#fff;border-color:var(--watt)}
 
+.farbtupfer{
+  display:inline-block;width:18px;height:18px;border-radius:var(--radius);
+  border:1px solid rgba(0,0,0,.15);flex:0 0 auto;padding:0;
+}
+.farbreihe{display:flex;flex-wrap:wrap;gap:8px}
+.farbtupfer.waehlbar{width:34px;height:34px;cursor:pointer}
+.farbtupfer.gewaehlt{box-shadow:0 0 0 2px var(--flaeche),0 0 0 4px var(--tinte)}
+
 /* --------------------------- Kacheln ---------------------------- */
 .kacheln{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 @media(min-width:680px){.kacheln{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Ganzflächig in der Farbe der Kategorie: an der Kasse wird im Stehen und
+   im Halbdunkel gegriffen, da trägt die Farbe weiter als der Text. Alle
+   Hausfarben sind dunkel genug für weiße Schrift. */
 .kachel{
-  position:relative;min-height:94px;padding:12px 12px 10px 18px;
-  border:1px solid var(--linieFein);border-radius:var(--radius);background:var(--flaeche);
+  position:relative;min-height:110px;padding:14px 14px 12px;
+  border:0;border-radius:var(--radius);
   display:flex;flex-direction:column;justify-content:space-between;gap:6px;
-  font:inherit;color:var(--tinte);text-align:left;cursor:pointer;
-  box-shadow:0 1px 2px rgba(16,37,26,.04);
+  font:inherit;color:#fff;text-align:left;cursor:pointer;
+  box-shadow:0 1px 3px rgba(16,37,26,.18);
 }
-.kachel .balken{position:absolute;left:0;top:0;bottom:0;width:6px;
-                border-radius:var(--radius) 0 0 var(--radius)}
-.kachel .bez{font-family:'Newsreader',Georgia,serif;font-size:19px;line-height:1.15}
-.kachel .preis{font-size:14px;color:var(--tinteWeich)}
+.kachel:active{transform:translateY(1px)}
+.kachel .bez{font-family:'Newsreader',Georgia,serif;font-size:22px;line-height:1.15;
+             padding-right:44px}
+.kachel .preis{font-size:15px;color:rgba(255,255,255,.85)}
+/* Die Zahl steht hell auf dunkel, damit sie sich von der Fläche löst. */
 .kachel .zahl{
-  position:absolute;top:8px;right:8px;min-width:28px;height:28px;padding:0 8px;
-  border-radius:14px;background:var(--watt);color:var(--papier);
-  font-size:15px;display:flex;align-items:center;justify-content:center;
+  position:absolute;top:10px;right:10px;min-width:34px;height:34px;padding:0 9px;
+  border-radius:17px;background:var(--papier);color:var(--tinte);
+  font-size:18px;font-weight:600;display:flex;align-items:center;justify-content:center;
 }
 .kachel .weniger{
-  position:absolute;bottom:8px;right:8px;width:32px;height:32px;border-radius:16px;
-  border:1px solid var(--linie);background:var(--papier);color:var(--tinteWeich);
-  font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;
+  position:absolute;bottom:10px;right:10px;width:40px;height:40px;border-radius:20px;
+  border:1px solid rgba(255,255,255,.55);background:rgba(0,0,0,.18);color:#fff;
+  font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;
 }
 
 /* --------------------------- Buchung ---------------------------- */
@@ -437,8 +449,13 @@ td.n,th.n{text-align:right}
         <label class="feld" style="width:130px"><span>Preis</span>
           <input id="katPreis" inputmode="decimal" placeholder="0,00" style="text-align:right"></label>
       </div>
-      <div class="reihe" style="margin-top:10px">
+      <div style="margin-top:10px">
+        <div class="feldTitel">Farbe der Kachel</div>
+        <div id="katFarben" class="farbreihe"></div>
+      </div>
+      <div class="reihe" style="margin-top:12px">
         <button class="knopf voll" id="btnKatNeu">Kategorie anlegen</button>
+        <button class="knopf hide" id="btnKatAbbrechen">Abbrechen</button>
       </div>
       <div id="katFehler" class="hinweis hide"></div>
     </div>
@@ -938,9 +955,13 @@ function migriere(d){
     if(!e.datum && e.date){ e.datum=e.date; delete e.date; }
     if(e.ort===undefined) e.ort="";
   });
-  neu.kats.forEach(function(k){
+  neu.kats.forEach(function(k,i){
     if(typeof k.cent!=="number") k.cent=Math.round(Number(k.price||0)*100);
     delete k.price;
+    /* Ältere Stände kennen keine Farbe; sie bekommen die, die sie bisher
+       über ihre Position hatten — dann sieht es nach dem Umstieg aus wie
+       vorher, nur bleibt es diesmal so. */
+    if(!/^#[0-9A-Fa-f]{6}$/.test(k.farbe||"")) k.farbe=KACHELFARBEN[i%KACHELFARBEN.length];
   });
   neu.tickets.forEach(function(t){
     if(typeof t.cent!=="number") t.cent=Math.round(Number(t.price||0)*100);
@@ -1066,7 +1087,25 @@ var korb={};
 /* Erdige Töne aus der Hausfarbenfamilie — Grün, Messing, Ziegel und ihre
    Nachbarn. Ein greller Farbring wäre schneller zu unterscheiden, würde
    aber neben dem Rest des Programms wie ein Fremdkörper stehen. */
-var KACHELFARBEN=["#1E5C3E","#80621C","#93382B","#35594A","#A07A2C","#4E6B3A"];
+/* Erdige Töne aus der Hausfarbenfamilie. Alle dunkel genug, dass weiße
+   Schrift darauf steht — die Kachel wird ganzflächig eingefärbt, damit man
+   sie im Halbdunkel an der Farbe greift und nicht am Text.
+
+   Die Farbe gehört zur Kategorie und wird bei ihr gespeichert. Vorher hing
+   sie an der Position in der Liste: ein Verschieben mit dem Pfeil färbte
+   alle Kacheln um, und wer sich auf "das grüne Feld" eingestellt hatte,
+   griff daneben. */
+var KACHELFARBEN=["#1E5C3E","#80621C","#93382B","#35594A","#A07A2C","#4E6B3A",
+                  "#2F5D63","#6B4A2E"];
+
+function naechsteFarbe(){
+  for(var i=0;i<KACHELFARBEN.length;i++){
+    var frei=true;
+    for(var j=0;j<db.kats.length;j++) if(db.kats[j].farbe===KACHELFARBEN[i]) frei=false;
+    if(frei) return KACHELFARBEN[i];
+  }
+  return KACHELFARBEN[db.kats.length%KACHELFARBEN.length];
+}
 
 function zeichneKacheln(){
   var box=$("kacheln"); box.innerHTML="";
@@ -1075,8 +1114,8 @@ function zeichneKacheln(){
     var b=document.createElement("button");
     b.className="kachel"; b.type="button";
     var q=korb[k.id]||0;
-    b.innerHTML='<span class="balken" style="background:'+KACHELFARBEN[i%KACHELFARBEN.length]+'"></span>'+
-      '<span class="bez">'+esc(k.name)+'</span>'+
+    b.style.background=k.farbe;
+    b.innerHTML='<span class="bez">'+esc(k.name)+'</span>'+
       '<span class="preis">'+eur(k.cent)+' &euro;</span>'+
       (q?'<span class="zahl">'+q+'</span>'+
          '<span class="weniger" data-weniger="'+esc(k.id)+'" title="Eine weniger">&minus;</span>':'');
@@ -1830,14 +1869,49 @@ function zeichneKats(){
   $("katListe").innerHTML = db.kats.length
     ? db.kats.map(function(k,i){
         return '<div class="zeile">'+
+          '<span class="farbtupfer" style="background:'+esc(k.farbe)+'"></span>'+
           '<span class="grow"><b>'+esc(k.name)+'</b> '+
           '<span class="muted mono">'+eur(k.cent)+' €</span></span>'+
           '<button class="knopf klein" data-hoch="'+esc(k.id)+'"'+(i===0?" disabled":"")+'>&uarr;</button>'+
           '<button class="knopf klein" data-runter="'+esc(k.id)+'"'+
             (i===db.kats.length-1?" disabled":"")+'>&darr;</button>'+
+          '<button class="knopf klein" data-katbearbeiten="'+esc(k.id)+'">Ändern</button>'+
           '<button class="knopf klein warn" data-katweg="'+esc(k.id)+'">Löschen</button></div>';
       }).join("")
     : '<div class="muted">Noch keine Kategorie angelegt.</div>';
+  zeichneFarbwahl();
+}
+
+/* Die Farbwahl ist eine Reihe Tupfer statt eines Farbwählers: acht Töne,
+   die zum Haus passen, sind genug, und die Wahl ist ein Griff statt einer
+   Fummelei am Schieberegler. */
+var gewaehlteFarbe=null, katImUmbau=null;
+
+function zeichneFarbwahl(){
+  var box=$("katFarben"); if(!box) return;
+  if(!gewaehlteFarbe) gewaehlteFarbe=naechsteFarbe();
+  box.innerHTML=KACHELFARBEN.map(function(f){
+    return '<button type="button" class="farbtupfer waehlbar'+
+      (f===gewaehlteFarbe?" gewaehlt":"")+'" data-farbe="'+f+'" '+
+      'style="background:'+f+'" aria-label="Farbe '+f+'"></button>';
+  }).join("");
+}
+
+/* Ändern statt löschen und neu anlegen: ein Tippfehler im Preis kostete
+   sonst die ganze Kategorie. Bearbeitet wird im selben Formular, in dem
+   auch angelegt wird — zwei Formulare nebeneinander für dieselbe Sache
+   wären eine Zumutung. */
+function katFormular(id){
+  katImUmbau=id||null;
+  var k=id?katNachId(id):null;
+  gewaehlteFarbe = k ? k.farbe : naechsteFarbe();
+  $("katName").value = k ? k.name : "";
+  $("katPreis").value = k ? eur(k.cent) : "";
+  $("btnKatNeu").textContent = k ? "Änderung speichern" : "Kategorie anlegen";
+  $("btnKatAbbrechen").classList.toggle("hide", !k);
+  $("katFehler").classList.add("hide");
+  zeichneFarbwahl();
+  if(k) $("katName").focus();
 }
 
 function allesZeichnen(){
@@ -1871,6 +1945,7 @@ function start(){
   $("wolkeAdresse").value=(db.ablage&&db.ablage.adresse)||"";
   $("wolkeWort").value=(db.ablage&&db.ablage.wort)||"";
   allesZeichnen();
+  katFormular(null);
   zeichnePruefLog();
   wolkeUhrStellen();
   /* Beim Öffnen einmal holen: das Gerät soll nicht mit einem Stand von
@@ -1911,11 +1986,21 @@ function start(){
     var v=e.target.getAttribute&&e.target.getAttribute("data-storno");
     if(!v) return;
     var teile=v.split("|"), evId=teile[0], nummer=teile[1];
+    var karte=null;
     for(var i=0;i<db.tickets.length;i++){
       var t=db.tickets[i];
-      if(t.evId===evId && t.nummer===nummer && t.status==="offen"){ t.status="storniert"; break; }
+      if(t.evId===evId && t.nummer===nummer && t.status==="offen"){ karte=t; break; }
     }
-    sichern(); zeichneListe(); zeichneZahlen(); melden("Ticket storniert");
+    if(!karte) return;
+    /* Bis hierher ging ein Fehlgriff in der Liste unwiderruflich durch —
+       auf dem Handy, mit der Liste unter dem Daumen, zu leicht ausgelöst.
+       Beim Löschen einer Veranstaltung wird gefragt, hier nun auch. */
+    if(!confirm("Karte "+ticketCode(karte)+" stornieren?\n"+
+                (karte.kat||"")+" · "+eur(karte.cent)+" €"+
+                (karte.gast?" · "+karte.gast:"")+
+                "\n\nDas lässt sich nicht rückgängig machen.")) return;
+    karte.status="storniert";
+    sichern(); zeichneListe(); zeichneZahlen(); wolkeVormerken(); melden("Karte storniert");
   });
   $("btnNachdruck").addEventListener("click",function(){
     var ev=aktivesEvent();
@@ -1972,9 +2057,33 @@ function start(){
       f.textContent="Bezeichnung und Preis werden gebraucht."; f.classList.remove("hide"); return;
     }
     f.classList.add("hide");
-    db.kats.push({id:"k"+Date.now()+Math.floor(Math.random()*99), name:name, cent:c});
-    sichern(); $("katName").value=""; $("katPreis").value="";
+
+    if(katImUmbau){
+      var k=katNachId(katImUmbau);
+      if(k){
+        /* Nur die Kategorie ändert sich. Bereits verkaufte Karten behalten
+           Bezeichnung und Preis, die zum Zeitpunkt des Verkaufs galten —
+           sonst schriebe eine Preisänderung am Abend die Einnahmen des
+           Nachmittags um. */
+        k.name=name; k.cent=c; k.farbe=gewaehlteFarbe;
+      }
+      sichern(); katFormular(null);
+      zeichneKats(); zeichneKacheln(); zeichneBuchung(); melden("Kategorie geändert");
+      return;
+    }
+
+    db.kats.push({id:"k"+Date.now()+Math.floor(Math.random()*99),
+                  name:name, cent:c, farbe:gewaehlteFarbe});
+    sichern(); katFormular(null);
     zeichneKats(); zeichneKacheln(); zeichneBuchung(); melden("Kategorie angelegt");
+  });
+
+  $("btnKatAbbrechen").addEventListener("click",function(){ katFormular(null); });
+
+  $("katFarben").addEventListener("click",function(e){
+    var f=e.target.getAttribute&&e.target.getAttribute("data-farbe");
+    if(!f) return;
+    gewaehlteFarbe=f; zeichneFarbwahl();
   });
 
   $("katListe").addEventListener("click",function(e){
@@ -1982,11 +2091,19 @@ function start(){
         hoch=z.getAttribute&&z.getAttribute("data-hoch"),
         runter=z.getAttribute&&z.getAttribute("data-runter"),
         weg=z.getAttribute&&z.getAttribute("data-katweg");
+    var bearbeiten=z.getAttribute&&z.getAttribute("data-katbearbeiten");
+    if(bearbeiten){ katFormular(bearbeiten); return; }
     function stelle(id){ for(var i=0;i<db.kats.length;i++) if(db.kats[i].id===id) return i; return -1; }
     if(hoch){ var i=stelle(hoch); if(i>0){ var a=db.kats[i]; db.kats[i]=db.kats[i-1]; db.kats[i-1]=a; } }
     if(runter){ var j=stelle(runter);
       if(j>=0&&j<db.kats.length-1){ var b=db.kats[j]; db.kats[j]=db.kats[j+1]; db.kats[j+1]=b; } }
-    if(weg){ db.kats=db.kats.filter(function(k){return k.id!==weg;}); delete korb[weg]; }
+    if(weg){
+      var kw=katNachId(weg);
+      if(kw && !confirm("Kategorie „"+kw.name+"“ löschen? Bereits verkaufte Karten "+
+                        "bleiben unberührt.")) return;
+      db.kats=db.kats.filter(function(k){return k.id!==weg;}); delete korb[weg];
+      if(katImUmbau===weg) katFormular(null);
+    }
     if(hoch||runter||weg){ sichern(); zeichneKats(); zeichneKacheln(); zeichneBuchung(); }
   });
 
