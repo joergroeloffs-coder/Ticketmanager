@@ -171,7 +171,11 @@ label.feld>span,.feldTitel{display:block;font-size:11px;text-transform:uppercase
 .kachel:active{transform:translateY(1px)}
 .kachel .bez{font-family:'Newsreader',Georgia,serif;font-size:22px;line-height:1.15;
              padding-right:44px}
-.kachel .preis{font-size:15px;opacity:.82}
+.kachel .preis{font-size:15px;opacity:.82;display:flex;justify-content:space-between;
+               gap:8px;align-items:baseline}
+.kachel .rest{font-size:13px;opacity:.95;white-space:nowrap}
+.kachel.erschoepft{opacity:.55}
+.kachel.erschoepft .rest{font-weight:600;opacity:1}
 /* Die Zahl steht hell auf dunkel, damit sie sich von der Fläche löst. */
 /* Zahl und Minus setzen sich in Tannengrün ab — auf jeder Kachel dieselbe
    Gestalt, hell oder dunkel. */
@@ -462,18 +466,13 @@ td.n,th.n{text-align:right}
 
   <div class="karte">
     <div class="titel">
-      <h2>Kassenabschluss</h2>
+      <h2>Übersicht und Abschluss</h2>
       <div class="reihe">
         <button class="knopf klein" id="btnAbschlussDrucken">Drucken</button>
         <button class="knopf voll" id="btnSchliessen">Kasse schließen</button>
       </div>
     </div>
     <div class="inhalt"><div id="abschluss"></div></div>
-  </div>
-
-  <div class="karte">
-    <div class="titel"><h2>Nach Kategorie</h2></div>
-    <div class="inhalt"><table id="nachKategorie"></table></div>
   </div>
 
   <div class="karte">
@@ -521,9 +520,17 @@ td.n,th.n{text-align:right}
       <div class="reihe" style="margin-top:14px">
         <label class="feld grow"><span>Bezeichnung</span>
           <input id="katName" placeholder="Erwachsene"></label>
-        <label class="feld" style="width:130px"><span>Preis</span>
+        <label class="feld" style="width:120px"><span>Preis</span>
           <input id="katPreis" inputmode="decimal" placeholder="0,00" style="text-align:right"></label>
+        <label class="feld" style="width:120px"><span>Höchstzahl</span>
+          <input id="katLimit" inputmode="numeric" placeholder="ohne" style="text-align:right"></label>
       </div>
+      <p class="muted" style="margin:8px 0 0">
+        Die Höchstzahl begrenzt, wie viele Plätze dieser Kategorie je
+        Veranstaltung verkauft werden — zweihundert Sitzplätze, dreiundsechzig
+        Essen. Die Kasse zeigt den Rest auf der Kachel und lässt nicht darüber
+        hinaus. Leer heißt: keine Grenze.
+      </p>
       <div style="margin-top:10px">
         <div class="feldTitel">Farbe der Kachel</div>
         <div id="katFarben" class="farbreihe"></div>
@@ -748,7 +755,7 @@ td.n,th.n{text-align:right}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "2.0";
+var VERSION = "2.1";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
@@ -1121,6 +1128,7 @@ function migriere(d){
     if(e.ort===undefined) e.ort="";
   });
   neu.kats.forEach(function(k,i){
+    k.limit = (Number.isFinite(Number(k.limit)) && Number(k.limit)>0) ? Math.floor(k.limit) : 0;
     if(typeof k.cent!=="number") k.cent=Math.round(Number(k.price||0)*100);
     delete k.price;
     /* Ältere Stände kennen keine Farbe; sie bekommen die, die sie bisher
@@ -1290,6 +1298,31 @@ function eventNachKuerzel(k){
   for(var i=0;i<db.events.length;i++) if(db.events[i].kuerzel===k) return db.events[i];
   return null;
 }
+/* Wie viele Plätze einer Kategorie in dieser Veranstaltung schon verkauft
+   sind — Stornos zählen nicht mit, nachgetragene Karten auch nicht: die
+   gehören zum Bestand des Geräts, das sie verkauft hat.
+
+   Was im Korb liegt, wird mitgezählt. Sonst ließe sich die Grenze innerhalb
+   einer einzigen Buchung überschreiten: dreimal antippen bei zwei freien
+   Plätzen, und erst beim Drucken fiele es auf. */
+function verkauftePlaetze(katName, mitKorb){
+  var ev=aktivesEvent(); if(!ev) return 0;
+  var n=db.tickets.reduce(function(a,t){
+    if(t.evId!==ev.id || t.nachgetragen || t.status==="storniert") return a;
+    return a + (t.kat===katName ? plaetzeVon(t) : 0);
+  },0);
+  if(mitKorb){
+    db.kats.forEach(function(k){ if(k.name===katName) n += (korb[k.id]||0); });
+  }
+  return n;
+}
+
+/* Null oder nichts heißt: keine Grenze. */
+function frei(k, mitKorb){
+  if(!k.limit) return null;
+  return Math.max(0, k.limit - verkauftePlaetze(k.name, mitKorb));
+}
+
 function katNachId(id){
   for(var i=0;i<db.kats.length;i++) if(db.kats[i].id===id) return db.kats[i];
   return null;
@@ -1390,14 +1423,26 @@ function zeichneKacheln(){
     /* Auf hellen Kacheln braucht es eine Kante, sonst schwimmen sie in der
        weißen Karte. */
     b.style.border = helligkeit(k.farbe)>0.5 ? "1px solid rgba(16,37,26,.18)" : "0";
+    var rest=frei(k,true);
+    if(rest===0) b.classList.add("erschoepft");
     b.innerHTML='<span class="bez">'+esc(k.name)+'</span>'+
-      '<span class="preis">'+eur(k.cent)+' &euro;</span>'+
+      '<span class="preis">'+eur(k.cent)+' &euro;'+
+        (rest===null ? '' :
+         '<span class="rest">'+(rest ? "noch "+rest+" von "+k.limit
+                                     : "ausverkauft")+'</span>')+'</span>'+
       (q?'<span class="zahl">'+q+'</span>'+
          '<span class="weniger" data-weniger="'+esc(k.id)+'" title="Eine weniger">&minus;</span>':'');
     b.addEventListener("click",function(e){
       var w=e.target.getAttribute&&e.target.getAttribute("data-weniger");
       if(w){ korb[w]=Math.max(0,(korb[w]||0)-1); if(!korb[w]) delete korb[w]; }
-      else korb[k.id]=(korb[k.id]||0)+1;
+      else {
+        if(frei(k,true)===0){
+          melden(k.limit ? "„"+k.name+"“ ist ausverkauft ("+k.limit+")"
+                         : "Nicht mehr verfügbar");
+          return;
+        }
+        korb[k.id]=(korb[k.id]||0)+1;
+      }
       zeichneKacheln(); zeichneBuchung();
     });
     box.appendChild(b);
@@ -1640,7 +1685,9 @@ function etikettenBogen(liste, nurRaster){
 function abschlussDrucken(){
   var ev=aktivesEvent(); if(!ev){ melden("Keine Veranstaltung aktiv"); return; }
   var d=abschlussDaten(ev), v=db.veranstalter||{};
-  var namen=Object.keys(d.nach).sort(), geraete=Object.keys(d.geraete).sort();
+  var namen=db.kats.map(function(k){return k.name;});
+  Object.keys(d.nach).forEach(function(k){ if(namen.indexOf(k)<0) namen.push(k); });
+  var geraete=Object.keys(d.geraete).sort();
 
   function zeile(a,b,c,e,f,fett){
     var s=fett?' style="font-weight:600"':'';
@@ -1665,7 +1712,7 @@ function abschlussDrucken(){
     '<th class="n">offen</th><th class="n">Euro</th></tr>';
 
   namen.forEach(function(k){
-    var z=d.nach[k];
+    var z=d.nach[k]||{verkauft:0,eingeloest:0,cent:0};
     h+=zeile(esc(k), z.verkauft, z.eingeloest, z.verkauft-z.eingeloest, eur(z.cent));
   });
   h+=zeile("Zusammen", d.summe.verkauft, d.summe.eingeloest-d.summe.nachgetragen,
@@ -2033,27 +2080,6 @@ function zeichneZahlen(){
   $("zNach").textContent=plaetzeSumme(nachgetragen);
   $("kachelNach").classList.toggle("hide", nachgetragen.length===0);
 
-  var nach={};
-  verkauft.forEach(function(t){
-    if(!nach[t.kat]) nach[t.kat]={n:0,cent:0,ein:0};
-    nach[t.kat].n+=plaetzeVon(t); nach[t.kat].cent+=(t.cent||0);
-    if(t.status==="eingeloest") nach[t.kat].ein+=plaetzeVon(t);
-  });
-  var schl=Object.keys(nach);
-  var zeilen = schl.map(function(k){
-    return '<tr><td>'+esc(k)+'</td><td class="n">'+nach[k].n+'</td>'+
-           '<td class="n">'+nach[k].ein+'</td>'+
-           '<td class="n mono">'+eur(nach[k].cent)+'</td></tr>';
-  }).join("");
-  if(nachgetragen.length){
-    zeilen += '<tr><td class="muted">nachgetragen, anderswo verkauft</td>'+
-              '<td class="n muted">—</td>'+
-              '<td class="n">'+plaetzeSumme(nachgetragen)+'</td>'+
-              '<td class="n muted">—</td></tr>';
-  }
-  $("nachKategorie").innerHTML = zeilen
-    ? '<tr><th>Kategorie</th><th class="n">Stück</th><th class="n">eingelöst</th><th class="n">Euro</th></tr>'+zeilen
-    : '<tr><td class="muted">Noch nichts verkauft.</td></tr>';
 }
 
 /* ========================= Zusammenführen =========================
@@ -2521,7 +2547,12 @@ function zeichneAbschluss(){
   knopf.className = zu ? "knopf" : "knopf voll";
 
   var d=abschlussDaten(ev);
-  var namen=Object.keys(d.nach).sort();
+  /* Alle angelegten Kategorien, auch die ohne Verkauf — sonst sähe man erst
+     nach dem ersten Ticket, wie viele Plätze noch frei sind. Dazu
+     Bezeichnungen, unter denen früher verkauft wurde und die es heute nicht
+     mehr gibt. */
+  var namen=db.kats.map(function(k){return k.name;});
+  Object.keys(d.nach).forEach(function(k){ if(namen.indexOf(k)<0) namen.push(k); });
   var geraete=Object.keys(d.geraete).sort();
 
   var h="";
@@ -2534,31 +2565,39 @@ function zeichneAbschluss(){
      '</div>';
 
   h+='<table><tr><th>Kategorie</th><th class="n">verkauft</th>'+
-     '<th class="n">eingelöst</th><th class="n">offen</th><th class="n">Euro</th></tr>';
+     '<th class="n">eingelöst</th><th class="n">offen</th>'+
+     '<th class="n">verfügbar</th><th class="n">Euro</th></tr>';
   if(!namen.length){
-    h+='<tr><td class="muted" colspan="5">Noch nichts verkauft.</td></tr>';
+    h+='<tr><td class="muted" colspan="6">Noch keine Kategorie angelegt.</td></tr>';
   }
   namen.forEach(function(k){
-    var z=d.nach[k];
+    var z=d.nach[k]||{verkauft:0,eingeloest:0,cent:0};
+    var kat=null;
+    for(var i=0;i<db.kats.length;i++) if(db.kats[i].name===k) kat=db.kats[i];
+    var rest = kat ? frei(kat,false) : null;
     h+='<tr><td>'+esc(k)+'</td>'+
        '<td class="n">'+z.verkauft+'</td>'+
        '<td class="n">'+z.eingeloest+'</td>'+
        '<td class="n'+((z.verkauft-z.eingeloest)?'':' muted')+'">'+(z.verkauft-z.eingeloest)+'</td>'+
+       '<td class="n'+(rest===null?' muted':(rest?'':' muted'))+'">'+
+         (rest===null ? "ohne Grenze" : rest+" von "+kat.limit)+'</td>'+
        '<td class="n mono">'+eur(z.cent)+'</td></tr>';
   });
   h+='<tr><td><b>Zusammen</b></td>'+
      '<td class="n"><b>'+d.summe.verkauft+'</b></td>'+
      '<td class="n"><b>'+(d.summe.eingeloest-d.summe.nachgetragen)+'</b></td>'+
      '<td class="n"><b>'+(d.summe.verkauft-(d.summe.eingeloest-d.summe.nachgetragen))+'</b></td>'+
+     '<td class="n muted">—</td>'+
      '<td class="n mono"><b>'+eur(d.summe.cent)+'</b></td></tr>';
   if(d.summe.nachgetragen){
     h+='<tr><td class="muted">nachgetragen, anderswo verkauft</td>'+
        '<td class="n muted">—</td><td class="n">'+d.summe.nachgetragen+'</td>'+
-       '<td class="n muted">—</td><td class="n muted">—</td></tr>';
+       '<td class="n muted">—</td><td class="n muted">—</td><td class="n muted">—</td></tr>';
   }
   if(d.summe.storniert){
     h+='<tr><td class="muted">storniert</td><td class="n">'+d.summe.storniert+'</td>'+
-       '<td class="n muted">—</td><td class="n muted">—</td><td class="n muted">—</td></tr>';
+       '<td class="n muted">—</td><td class="n muted">—</td><td class="n muted">—</td>'+
+       '<td class="n muted">—</td></tr>';
   }
   h+='</table>';
 
@@ -2658,7 +2697,8 @@ function zeichneKats(){
         return '<div class="zeile">'+
           '<span class="farbtupfer" style="background:'+esc(k.farbe)+'"></span>'+
           '<span class="grow"><b>'+esc(k.name)+'</b> '+
-          '<span class="muted mono">'+eur(k.cent)+' €</span></span>'+
+          '<span class="muted mono">'+eur(k.cent)+' €</span>'+
+          (k.limit?'<span class="muted"> · höchstens '+k.limit+'</span>':'')+'</span>'+
           '<button class="knopf klein" data-hoch="'+esc(k.id)+'"'+(i===0?" disabled":"")+'>&uarr;</button>'+
           '<button class="knopf klein" data-runter="'+esc(k.id)+'"'+
             (i===db.kats.length-1?" disabled":"")+'>&darr;</button>'+
@@ -2694,6 +2734,7 @@ function katFormular(id){
   gewaehlteFarbe = k ? k.farbe : naechsteFarbe();
   $("katName").value = k ? k.name : "";
   $("katPreis").value = k ? eur(k.cent) : "";
+  $("katLimit").value = (k && k.limit) ? String(k.limit) : "";
   $("btnKatNeu").textContent = k ? "Änderung speichern" : "Kategorie anlegen";
   $("btnKatAbbrechen").classList.toggle("hide", !k);
   $("katFehler").classList.add("hide");
@@ -2716,6 +2757,10 @@ function reiterZeigen(name){
   document.querySelectorAll("nav button").forEach(function(b){
     b.setAttribute("aria-current", b.getAttribute("data-reiter")===name ? "true":"false");
   });
+  /* Beim Wechsel auf die Kasse neu zeichnen: seit dem letzten Blick kann ein
+     Storno oder ein Abgleich mit einem anderen Gerät die freien Plätze
+     verändert haben. */
+  if(name==="kasse"){ zeichneKacheln(); zeichneBuchung(); }
   if(name!=="einlass") kameraAus();
   if(name==="einlass") $("scanFeld").focus();
   if(name==="tickets"){ zeichneListe(); zeichneZahlen(); zeichneAbschluss(); }
@@ -2796,7 +2841,10 @@ function start(){
                 (karte.gast?" · "+karte.gast:"")+
                 "\n\nDas lässt sich nicht rückgängig machen.")) return;
     karte.status="storniert";
-    sichern(); zeichneListe(); zeichneZahlen(); wolkeVormerken(); melden("Karte storniert");
+    /* Auch die Kacheln: ein Storno gibt einen Platz frei, und das muss an
+       der Kasse zu sehen sein. */
+    sichern(); zeichneListe(); zeichneZahlen(); zeichneAbschluss(); zeichneKacheln();
+    wolkeVormerken(); melden("Karte storniert");
   });
   $("btnSchliessen").addEventListener("click",function(){
     var ev=aktivesEvent(); if(!ev) return;
@@ -2890,6 +2938,12 @@ function start(){
     if(!name || !Number.isFinite(c) || c<0){
       f.textContent="Bezeichnung und Preis werden gebraucht."; f.classList.remove("hide"); return;
     }
+    var rohGrenze=$("katLimit").value.trim();
+    var grenze=rohGrenze==="" ? 0 : Math.floor(Number(rohGrenze.replace(",",".")));
+    if(!Number.isFinite(grenze) || grenze<0){
+      f.textContent="Die Höchstzahl ist eine ganze Zahl, oder sie bleibt leer.";
+      f.classList.remove("hide"); return;
+    }
     f.classList.add("hide");
 
     if(katImUmbau){
@@ -2899,7 +2953,7 @@ function start(){
            Bezeichnung und Preis, die zum Zeitpunkt des Verkaufs galten —
            sonst schriebe eine Preisänderung am Abend die Einnahmen des
            Nachmittags um. */
-        k.name=name; k.cent=c; k.farbe=gewaehlteFarbe;
+        k.name=name; k.cent=c; k.farbe=gewaehlteFarbe; k.limit=grenze;
       }
       sichern(); katFormular(null);
       zeichneKats(); zeichneKacheln(); zeichneBuchung(); melden("Kategorie geändert");
@@ -2907,7 +2961,7 @@ function start(){
     }
 
     db.kats.push({id:"k"+Date.now()+Math.floor(Math.random()*99),
-                  name:name, cent:c, farbe:gewaehlteFarbe});
+                  name:name, cent:c, farbe:gewaehlteFarbe, limit:grenze});
     sichern(); katFormular(null);
     zeichneKats(); zeichneKacheln(); zeichneBuchung(); melden("Kategorie angelegt");
   });
