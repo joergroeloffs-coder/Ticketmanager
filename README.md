@@ -136,6 +136,40 @@ Die nachgetragenen Karten stehen in der Übersicht für sich. Sie zählen nicht
 zu den Einnahmen dieses Geräts, denn ihr Preis steht nicht im Code — er
 liegt beim Gerät, das sie verkauft hat.
 
+## Kassenabschluss
+
+Unter *Tickets* steht oben der **Kassenabschluss**: je Kategorie, wie viele
+Plätze verkauft, wie viele eingelöst wurden und wie viele offen blieben, dazu
+die Einnahmen. Darunter, wer eingelassen hat — je Gerät.
+
+**Kasse schließen** beendet den Verkauf für diese Veranstaltung. Der Einlass
+läuft weiter; es kommt vor, dass abgerechnet wird, während die letzten Gäste
+noch eintrudeln. Wieder öffnen geht jederzeit an derselben Stelle.
+
+**Drucken** legt den Abschluss auf ein A4-Blatt im Druckbild des
+Vereinsmanagers — mit Veranstalter im Kopf, Datum und Kürzel. Die
+Kassenprüfung will einen Beleg sehen, kein Bildschirmfoto.
+
+Gezählt werden Plätze, nicht Karten: eine Familienkarte ist ein Stück Papier,
+aber vier Leute im Saal.
+
+## Mehrere Türen
+
+Es können beliebig viele Geräte mitlaufen. Jedes bekommt unter
+*Einstellungen → Einlass* ein eigenes **Kassenzeichen** — einen Buchstaben.
+Er tut zweierlei: er hält die Kartennummern der verkaufenden Geräte
+auseinander, und er steht an jeder eingelösten Karte, sodass der Abschluss
+sagen kann, welche Tür wie viele durchgelassen hat.
+
+Auch Geräte, die nur scannen, sollten deshalb einen Buchstaben bekommen.
+Ohne erscheinen ihre Einlässe im Abschluss als *ohne Zeichen*.
+
+Was dabei zu bedenken ist: jedes Gerät fragt die Ablage in seinem Takt. Bei
+vielen Geräten und einminütigem Abgleich summiert sich das; Google begrenzt,
+wie lange ein Skript am Tag laufen darf. Für einen Vereinsabend mit einer
+Handvoll Geräten ist das kein Thema — geschrieben wird ohnehin nur, wenn es
+etwas zu schreiben gibt.
+
 ## Am Ende des Abends: zusammenführen
 
 Nach dem Einlass weiß das eine Gerät, wer bezahlt hat, und das andere, wer
@@ -263,7 +297,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **1.9** | Verbindung prüfen: sagt, warum ein Abgleich klemmt |
+| **2.0** | Kassenabschluss zum Drucken, Einlass je Gerät ausgewiesen |
+| 1.9 | Verbindung prüfen: sagt, warum ein Abgleich klemmt |
 | 1.8 | Zugang zur Ablage per QR-Code auf das zweite Gerät |
 | 1.7 | ein leeres Gerät richtet sich aus der Ablage selbst ein |
 | 1.6 | Hausfarben auf den Kacheln, Veranstaltungen änderbar, Ton am Einlass |
