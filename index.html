@@ -633,6 +633,12 @@ td.n,th.n{text-align:right}
         <button class="knopf voll" id="btnWolkeJetzt">Jetzt abgleichen</button>
       </div>
       <div id="wolkeStand" class="muted" style="margin-top:10px">Keine Ablage eingetragen.</div>
+      <div class="reihe" style="margin-top:10px">
+        <button class="knopf klein" id="btnWolkePruefen">Verbindung prüfen</button>
+        <span class="muted grow">Fragt die Ablage einmal und zeigt genau, was
+          zurückkommt — der schnellste Weg, einen klemmenden Abgleich zu verstehen.</span>
+      </div>
+      <div id="wolkeProbe" class="hide" style="margin-top:10px"></div>
       <div class="reihe" style="margin-top:12px">
         <button class="knopf klein" id="btnZugangZeigen">Zugang als QR-Code zeigen</button>
         <span class="muted grow">Damit richtet sich ein zweites Gerät ein, ohne die
@@ -711,7 +717,7 @@ td.n,th.n{text-align:right}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "1.8";
+var VERSION = "1.9";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
@@ -2150,15 +2156,92 @@ function wolkeSagen(text){ wolkeStandText=text; zeichneWolke(); }
 /* Absichtlich text/plain: bei jedem anderen Inhaltstyp schickt der Browser
    vorab eine Anfrage, die Apps Script nicht beantwortet — der Aufruf bräche
    ab, bevor er beginnt. Das Skript liest den Text selbst als JSON. */
+/* Was schiefgehen kann, geht bei Google auf immer dieselben paar Arten
+   schief — und meldet sich dabei nicht als Fehler, sondern mit einer
+   Anmeldeseite oder einer Fehlerseite in HTML. Ein blankes "Unexpected
+   token <" hilft dabei niemandem weiter. Deshalb wird die Antwort erst als
+   Text gelesen und einsortiert, bevor sie als JSON gedeutet wird. */
+function wolkeDeuten(status, text){
+  var anfang=String(text||"").replace(/\s+/g," ").trim();
+  var klein=anfang.toLowerCase();
+
+  if(klein.indexOf("accounts.google.com")>=0 || klein.indexOf("signinchooser")>=0 ||
+     (klein.indexOf("<html")>=0 && (klein.indexOf("anmeld")>=0 || klein.indexOf("sign in")>=0))){
+    return "Die Ablage schickt eine Anmeldeseite statt einer Antwort. In Apps Script "+
+           "unter Bereitstellen → Bereitstellungen verwalten muss bei "+
+           "\u201eWer hat Zugriff\u201c ausdrücklich Jeder stehen — nicht "+
+           "\u201eJeder mit einem Google-Konto\u201c.";
+  }
+  if(klein.indexOf("<html")>=0 || klein.indexOf("<!doctype")>=0){
+    return "Die Ablage antwortet mit einer Internetseite statt mit Daten"+
+           (status?" (Status "+status+")":"")+". Meist heißt das: die Adresse "+
+           "gehört nicht zu einer bereitgestellten Web-App, oder sie endet nicht "+
+           "auf /exec. Anfang der Antwort: "+anfang.slice(0,90);
+  }
+  if(!anfang) return "Die Ablage antwortet leer"+(status?" (Status "+status+")":"")+".";
+  return "Unverständliche Antwort der Ablage"+(status?" (Status "+status+")":"")+": "+
+         anfang.slice(0,120);
+}
+
 function wolkeRufen(anfrage){
   return fetch(db.ablage.adresse, {
     method:"POST",
     headers:{"Content-Type":"text/plain;charset=utf-8"},
     body:JSON.stringify(anfrage),
     redirect:"follow",
+  }).catch(function(f){
+    /* Hierher führt kein Serverfehler, sondern gar keine Antwort: kein Netz,
+       eine falsche Adresse, oder der Browser lässt den Aufruf nicht zu. */
+    throw new Error("Die Ablage ist nicht erreichbar ("+f.message+"). Entweder fehlt "+
+                    "das Netz, oder die Adresse stimmt nicht. Sie muss mit "+
+                    "https://script.google.com/ beginnen und auf /exec enden.");
   }).then(function(a){
-    if(!a.ok) throw new Error("Die Ablage antwortet mit "+a.status+".");
-    return a.json();
+    return a.text().then(function(text){
+      var antwort=null;
+      try{ antwort=JSON.parse(text); }catch(e){}
+      if(!antwort || typeof antwort!=="object") throw new Error(wolkeDeuten(a.status,text));
+      if(!a.ok) throw new Error("Die Ablage antwortet mit Status "+a.status+".");
+      return antwort;
+    });
+  });
+}
+
+/* Ein Knopf, der nur nachsieht und alles zeigt, was zurückkommt. Wenn der
+   Abgleich klemmt, ist das die schnellste Art herauszufinden, woran. */
+function wolkePruefen(){
+  var kasten=$("wolkeProbe");
+  kasten.className="hinweis";
+  kasten.textContent="Frage die Ablage …";
+  kasten.classList.remove("hide");
+
+  var begonnen=Date.now();
+  fetch(db.ablage.adresse, {
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify({aktion:"holen", wort:db.ablage.wort}),
+    redirect:"follow",
+  }).then(function(a){
+    return a.text().then(function(text){ return {a:a, text:text}; });
+  }).then(function(e){
+    var dauer=Date.now()-begonnen, antwort=null;
+    try{ antwort=JSON.parse(e.text); }catch(f){}
+    var zeilen=[
+      "Status "+e.a.status+" · "+(e.a.headers.get("content-type")||"ohne Typ")+
+        " · "+dauer+" ms",
+      "Antwort: "+String(e.text).replace(/\s+/g," ").trim().slice(0,200)
+    ];
+    var urteil;
+    if(antwort && antwort.ok) urteil="Die Ablage antwortet richtig. Stand "+antwort.stand+
+      ", "+(antwort.daten?"Daten vorhanden":"noch leer")+".";
+    else if(antwort && antwort.fehler) urteil="Die Ablage antwortet, lehnt aber ab: "+antwort.fehler;
+    else urteil=wolkeDeuten(e.a.status, e.text);
+    kasten.className = (antwort&&antwort.ok) ? "hinweis" : "hinweis";
+    kasten.innerHTML="<b>"+esc(urteil)+"</b><div class=\"mono\" style=\"margin-top:8px;"+
+      "font-size:12px;word-break:break-all\">"+esc(zeilen.join(" — "))+"</div>";
+  }).catch(function(f){
+    kasten.innerHTML="<b>Keine Antwort: "+esc(f.message)+"</b>"+
+      "<div style=\"margin-top:8px\">Das kommt vor, wenn kein Netz da ist, die Adresse "+
+      "nicht stimmt, oder der Browser den Aufruf nicht zulässt.</div>";
   });
 }
 
@@ -2687,6 +2770,11 @@ function start(){
     melden(a ? "Ablage gespeichert" : "Ablage entfernt");
   });
   $("btnWolkeJetzt").addEventListener("click",function(){ wolkeAbgleichen(); });
+
+  $("btnWolkePruefen").addEventListener("click",function(){
+    if(!wolkeBereit()){ melden("Erst Adresse und Zugangswort eintragen"); return; }
+    wolkePruefen();
+  });
 
   $("btnZugangZeigen").addEventListener("click",function(){
     var kasten=$("zugangBild");
