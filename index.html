@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ticketkasse · Fering Vereinsmanager</title>
 
+<!-- Damit die Kasse sich als Programm einrichten lässt: eigenes Symbol,
+     eigenes Fenster ohne Adresszeile. Aus einer heruntergeladenen Datei
+     heraus laufen diese Verweise ins Leere — das schadet nichts, die Seite
+     arbeitet dann wie bisher. -->
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0C1D14">
+<meta name="apple-mobile-web-app-title" content="Ticketkasse">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
 <!--
   Ticketkasse — Abendkasse für Veranstaltungen des Vereins.
 
@@ -755,7 +766,7 @@ td.n,th.n{text-align:right}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "2.1";
+var VERSION = "2.2";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird

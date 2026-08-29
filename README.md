@@ -23,6 +23,27 @@ Sicherung von Hand herüberreichen und *zusammenführen*, oder die **Ablage**
 im eigenen Drive, aus der sich die Geräte selbst versorgen. Beides ist
 Zugabe — ohne das arbeitet die Kasse für sich allein weiter.
 
+## Als Programm einrichten
+
+Die Kasse lässt sich wie ein gewöhnliches Programm ablegen — mit eigenem
+Symbol und eigenem Fenster ohne Adresszeile. Am Eingang ist das mehr als
+Zierde: es gibt dann nichts, worüber jemand versehentlich wegnavigiert.
+
+- **Windows, Chrome oder Edge:** Adresse öffnen, im Menü ⋮ auf *Ticketkasse
+  installieren*. Fehlt der Eintrag: *Weitere Tools → Verknüpfung erstellen*,
+  dort *In neuem Fenster öffnen* ankreuzen.
+- **Android, Chrome:** Menü ⋮ → *App installieren*.
+- **iPhone und iPad, Safari:** Teilen-Knopf → *Zum Home-Bildschirm*.
+- **macOS:** in Chrome wie unter Windows; in Safari *Ablage → Zum Dock
+  hinzufügen*.
+
+Wer nur eine Verknüpfung will, zieht das Symbol links in der Adresszeile auf
+den Schreibtisch.
+
+Das Zeichen liegt als `favicon.svg` bei, die abgeleiteten Größen entstehen
+daraus. Aus einer heruntergeladenen Datei heraus greifen Symbol und
+Einrichtung nicht — dafür braucht es die Adresse.
+
 ## Am Eingang
 
 Über die Adresse oben liest die Kasse QR-Codes mit der Kamera — auf
@@ -312,7 +333,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **2.1** | Höchstzahlen je Kategorie, eine Übersicht statt dreier |
+| **2.2** | eigenes Symbol, als Programm einrichtbar |
+| 2.1 | Höchstzahlen je Kategorie, eine Übersicht statt dreier |
 | 2.0 | Kassenabschluss zum Drucken, Einlass je Gerät ausgewiesen |
 | 1.9 | Verbindung prüfen: sagt, warum ein Abgleich klemmt |
 | 1.8 | Zugang zur Ablage per QR-Code auf das zweite Gerät |
