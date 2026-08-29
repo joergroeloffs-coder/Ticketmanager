@@ -134,6 +134,19 @@ Rundmail. Was hochgeladen wird, ist der Stand ohne diese Zugangsdaten und
 ohne das Kassenzeichen — das ist die Kennung des jeweiligen Geräts und darf
 nicht wandern.
 
+## Fassungen
+
+Die Nummer steht oben in der Kopfzeile der Kasse. Wer zwei Geräte
+nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
+
+| | |
+| --- | --- |
+| **1.4** | Ablage im Drive: die Geräte gleichen sich selbst ab |
+| 1.3 | Zusammenführen zweier Stände von Hand, über eine Sicherung |
+| 1.2 | Nachtragen unbekannter Karten am Einlass, Kassenzeichen |
+| 1.1 | eigener QR-Leser — Kamera auch auf iPhone, iPad und Windows |
+| 1.0 | Hausstil des Vereinsmanagers, Anordnung an der Kasse wählbar |
+
 ## Herkunft
 
 Farben, Maße und Druckbild stammen aus dem Fering Vereinsmanager, der
