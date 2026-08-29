@@ -704,7 +704,7 @@ td.n,th.n{text-align:right}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "1.6";
+var VERSION = "1.7";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
@@ -1396,13 +1396,19 @@ function zeichneBericht(b){
   }
 
   var zeilen=[
+    ["Veranstaltungen übernommen", b.eventsNeu],
+    ["Kategorien übernommen", b.katsNeu],
     ["Karten übernommen", b.ticketsNeu],
     ["Einlässe übernommen", b.einlaesse],
     ["Nachträge geklärt", b.geklaert],
     ["Stornos übernommen", b.stornos],
-    ["Veranstaltungen neu", b.eventsNeu],
-    ["Kategorien neu", b.katsNeu],
   ].filter(function(z){ return z[1]>0; });
+
+  var kopf = b.schluesselUebernommen
+    ? '<div class="hinweis" style="background:var(--wattHell);border-color:var(--watt);'+
+      'color:var(--watt);margin:0 0 12px">Dieses Gerät war leer und hat den Schlüssel '+
+      'der Ablage übernommen. Damit gelten hier dieselben Karten wie überall sonst.</div>'
+    : '';
 
   var h='<div class="karte" style="margin:0"><div class="titel"><h2>Abgleich</h2>'+
         '<button class="knopf klein" id="btnBerichtZu">Schließen</button></div>'+
@@ -1428,6 +1434,7 @@ function zeichneBericht(b){
   }
 
   h += '</div></div>';
+  h = kopf + h;
   kasten.className="";
   kasten.innerHTML=h;
   kasten.classList.remove("hide");
@@ -1905,17 +1912,31 @@ function zeichneZahlen(){
 function zusammenfuehren(roh){
   var fremd=migriere(roh);
 
+  var b={eventsNeu:0, katsNeu:0, ticketsNeu:0, einlaesse:0, stornos:0,
+         geklaert:0, widersprueche:[], schluesselUebernommen:false};
+
   /* Ohne denselben Schlüssel wären die übernommenen Karten hier nicht
      prüfbar: ihre Signaturen ließen sich nicht nachrechnen, und am Einlass
-     stünde bei jeder "Gefälscht". Lieber gar nicht als falsch. */
-  if(fremd.schluessel!==db.schluessel){
-    return {fehler:"Diese Sicherung wurde mit einem anderen Schlüssel geschrieben. "+
-                   "Die Karten darin ließen sich hier nicht prüfen. Trage auf beiden "+
-                   "Geräten denselben Schlüssel ein und erzeuge die Sicherung neu."};
-  }
+     stünde bei jeder "Gefälscht". Lieber gar nicht als falsch.
 
-  var b={eventsNeu:0, katsNeu:0, ticketsNeu:0, einlaesse:0, stornos:0,
-         geklaert:0, widersprueche:[]};
+     Ein frisch geöffnetes Gerät hat aber noch gar keinen eigenen Stand —
+     nur einen zufällig erzeugten Schlüssel, an dem nichts hängt. Dort wäre
+     die Sperre bloß im Weg: sie zwänge dazu, vierundzwanzig Zeichen von
+     Hand abzutippen, ehe überhaupt eine Veranstaltung erscheint. Ist hier
+     nichts zu verlieren, wird der Schlüssel der Ablage übernommen. Wer
+     Adresse und Zugangswort hat, gehört ohnehin dazu. */
+  if(fremd.schluessel!==db.schluessel){
+    var leer = !db.events.length && !db.kats.length && !db.tickets.length;
+    if(!leer){
+      return {fehler:"Diese Sicherung wurde mit einem anderen Schlüssel geschrieben. "+
+                     "Die Karten darin ließen sich hier nicht prüfen. Entweder auf "+
+                     "beiden Geräten denselben Schlüssel eintragen — oder dieses "+
+                     "Gerät unter Zurücksetzen leeren, dann übernimmt es den "+
+                     "Schlüssel beim ersten Abgleich von selbst."};
+    }
+    db.schluessel=fremd.schluessel;
+    b.schluesselUebernommen=true;
+  }
 
   /* --- Veranstaltungen über das Kürzel --- */
   var evAbbildung={};
@@ -1935,7 +1956,13 @@ function zusammenfuehren(roh){
   /* --- Kategorien über den Namen --- */
   fremd.kats.forEach(function(fk){
     if(!db.kats.some(function(k){return k.name===fk.name;})){
-      db.kats.push({id:"k"+Date.now()+Math.floor(Math.random()*999), name:fk.name, cent:fk.cent});
+      /* Die Farbe gehört zur Kategorie und muss mitkommen — sonst stünde auf
+         dem zweiten Gerät dieselbe Kategorie in einer anderen Farbe, und die
+         Farbe wäre als Merkhilfe wertlos. Bringt die Sicherung keine mit
+         (alter Stand), wird hier eine vergeben. */
+      db.kats.push({id:"k"+Date.now()+Math.floor(Math.random()*999),
+                    name:fk.name, cent:fk.cent,
+                    farbe:/^#[0-9A-Fa-f]{6}$/.test(fk.farbe||"") ? fk.farbe : naechsteFarbe()});
       b.katsNeu++;
     }
   });
@@ -2098,6 +2125,7 @@ function wolkePaket(){
   var k={};
   for(var f in db) if(Object.prototype.hasOwnProperty.call(db,f)) k[f]=db[f];
   delete k.ablage;
+  delete k.kassenzeichen;
   return k;
 }
 
@@ -2147,8 +2175,11 @@ function wolkeAbgleichen(versuch){
 
       allesZeichnen();
       var b=e.bericht;
-      var dazu = b && (b.ticketsNeu||b.einlaesse||b.geklaert||b.stornos)
-        ? " · "+[mehrzahl(b.ticketsNeu,"Karte","Karten"),
+      if(b && b.schluesselUebernommen) $("schluessel").value=db.schluessel;
+      var dazu = b && (b.eventsNeu||b.katsNeu||b.ticketsNeu||b.einlaesse||b.geklaert||b.stornos)
+        ? " · "+[mehrzahl(b.eventsNeu,"Veranstaltung","Veranstaltungen"),
+                 mehrzahl(b.katsNeu,"Kategorie","Kategorien"),
+                 mehrzahl(b.ticketsNeu,"Karte","Karten"),
                  mehrzahl(b.einlaesse,"Einlass","Einlässe"),
                  mehrzahl(b.geklaert,"Nachtrag","Nachträge"),
                  mehrzahl(b.stornos,"Storno","Stornos")]
@@ -2156,7 +2187,10 @@ function wolkeAbgleichen(versuch){
         : "";
       wolkeSagen("Abgeglichen "+uhrzeit(Date.now())+" Uhr"+dazu+
                  (e.ablegen.unveraendert && !dazu ? " · nichts Neues" : ""));
-      if(b && b.widersprueche && b.widersprueche.length) zeichneBericht(b);
+      /* Widersprüche und eine Schlüsselübernahme sind beide zu wichtig, um
+         nur in der Statuszeile zu stehen. */
+      if(b && (b.schluesselUebernommen || (b.widersprueche && b.widersprueche.length)))
+        zeichneBericht(b);
       return true;
     })
     .catch(function(f){
@@ -2303,6 +2337,7 @@ function katFormular(id){
 }
 
 function allesZeichnen(){
+  if($("schluessel")) $("schluessel").value=db.schluessel;
   zeichneEvents(); zeichneKats(); zeichneKacheln(); zeichneBuchung();
   zeichneLayoutWahl(); zeichneSammelWahl(); zeichneNachtragen(); zeichneTonWahl(); zeichneWolke();
   zeichneListe(); zeichneZahlen();
