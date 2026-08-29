@@ -30,6 +30,46 @@ aus — das untersagen alle Browser, und daran lässt sich nichts drehen.
 Verkauf, Druck und das Eintippen des Codes funktionieren dort trotzdem
 vollständig. Für den Einlass ist die Adresse oben der richtige Weg.
 
+## Eine Karte für mehrere Plätze
+
+An der Kasse steht unter *Codes* die Wahl: **je Platz ein Code** oder **ein
+Code für alle**. Beim zweiten bekommt eine Familie eine Karte statt vier;
+darauf steht, woraus sie besteht („2 Erwachsene, 2 Kinder") und für wie
+viele sie gilt.
+
+Die Platzzahl steht **in der Nummer** und ist damit mitsigniert:
+`SF26-A0007X4` ist eine Karte für vier. Das ist kein Schönheitsfehler,
+sondern der Kern: am Eingang wird eine unbekannte Karte nachgetragen —
+stünde die Vier nur beim verkaufenden Gerät, zählte die Tür sie als eine
+Person. So liest jedes Gerät sie direkt aus dem Code, und aus `X4` ein `X9`
+zu machen zerstört die Signatur.
+
+Am Einlass steht dann groß **„Gültig · 4 Personen"**. Gezählt werden in der
+Übersicht Plätze, nicht Karten — eine Familienkarte ist ein Stück Papier,
+aber vier Leute im Saal. Eine Nummer ohne `X` heißt eine Person; alle
+vorher gedruckten Karten bleiben gültig.
+
+## Druck auf Etiketten
+
+Neben „mehrere pro Seite" und „eine pro Seite" steht an der Kasse
+**Etikettenbogen**: dreißig Karten in einem Rutsch auf Aufkleber, als
+Eintrittskarten oder Gutscheine.
+
+Voreingestellt ist das verbreitetste Herma-Raster — 70 × 37 mm, 24 je
+Bogen, drei mal acht, randlos. Steht auf deiner Packung etwas anderes,
+trägst du es unter *Einstellungen → Etikettenbogen* ein; alle Maße sind in
+Millimetern einstellbar.
+
+**Vor dem ersten guten Bogen:** *Ausrichtung drucken* liefert ein Blatt mit
+nur den leeren Feldern. Auf weißes Papier drucken und gegen einen
+Etikettenbogen halten. Stimmt es nicht, liegt es fast immer am Druckdialog
+— dort muss **Tatsächliche Größe** oder **100 %** stehen, nicht „An Seite
+anpassen". Das schrumpft den Bogen um ein paar Prozent, und ab der zweiten
+Reihe steht alles daneben.
+
+Der QR-Code misst auf dem Etikett 29 mm bei 25 Modulen, also einen
+Millimeter je Punkt — reichlich für jede Handykamera.
+
 ## Zwei Geräte, ein Abend
 
 Drinnen wird verkauft, draußen wird gescannt — dafür müssen die Geräte nicht
@@ -141,7 +181,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **1.4** | Ablage im Drive: die Geräte gleichen sich selbst ab |
+| **1.5** | farbige Kacheln, Kategorien änderbar, Sammelkarten, Etikettendruck |
+| 1.4 | Ablage im Drive: die Geräte gleichen sich selbst ab |
 | 1.3 | Zusammenführen zweier Stände von Hand, über eine Sicherung |
 | 1.2 | Nachtragen unbekannter Karten am Einlass, Kassenzeichen |
 | 1.1 | eigener QR-Leser — Kamera auch auf iPhone, iPad und Windows |
