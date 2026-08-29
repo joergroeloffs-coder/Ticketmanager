@@ -41,7 +41,10 @@ Wer nur eine Verknüpfung will, zieht das Symbol links in der Adresszeile auf
 den Schreibtisch.
 
 Das Zeichen liegt als `favicon.svg` bei, die abgeleiteten Größen entstehen
-daraus. Aus einer heruntergeladenen Datei heraus greifen Symbol und
+daraus. Daneben liegt `favicon-b.svg`, ein zweiter Entwurf: statt der Karte
+das Suchmuster eines QR-Codes, das bis hinunter zu sechzehn Punkten trägt, wo
+der erste zum Fleck wird. Wer tauscht, benennt die Dateien um und erzeugt die
+PNG-Größen neu. Aus einer heruntergeladenen Datei heraus greifen Symbol und
 Einrichtung nicht — dafür braucht es die Adresse.
 
 ## Am Eingang
@@ -85,6 +88,24 @@ Voreingestellt ist das verbreitetste Herma-Raster — 70 × 37 mm, 24 je
 Bogen, drei mal acht, randlos. Steht auf deiner Packung etwas anderes,
 trägst du es unter *Einstellungen → Etikettenbogen* ein; alle Maße sind in
 Millimetern einstellbar.
+
+### Etiketten- und Thermodrucker
+
+Geräte, die einzelne Schildchen oder eine endlose Bahn ziehen — Brother,
+Dymo, Zebra, Bondrucker — kennen kein A4. Für sie steht an der Kasse die
+vierte Anordnung: **Etikettendrucker**, ein Ticket je Etikett.
+
+Das Maß trägst du unter *Einstellungen → Etikettenbogen* ein, im unteren
+Teil: Breite, Höhe und Rand in Millimetern. Voreingestellt sind 62 × 29 mm.
+**Die Höhe leer zu lassen heißt fortlaufend** — dann bestimmt der Inhalt, wie
+weit das Papier vorgeschoben wird; das ist der Weg für Bondrucker.
+
+Das Seitenmaß setzt die Kasse vor jedem Druck neu. Nach einem Etikettendruck
+steht A4 wieder auf A4, ohne dass jemand etwas umstellen müsste.
+
+*Probeetikett drucken* wirft ein einzelnes Schildchen mit gestricheltem
+Rahmen und den eingetragenen Maßen aus. Sitzt der Rahmen auf der Kante des
+Etiketts, stimmt das Maß.
 
 **Vor dem ersten guten Bogen:** *Ausrichtung drucken* liefert ein Blatt mit
 nur den leeren Feldern. Auf weißes Papier drucken und gegen einen
@@ -333,7 +354,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **2.2** | eigenes Symbol, als Programm einrichtbar |
+| **2.3** | Druck auf Etiketten- und Thermodrucker |
+| 2.2 | eigenes Symbol, als Programm einrichtbar |
 | 2.1 | Höchstzahlen je Kategorie, eine Übersicht statt dreier |
 | 2.0 | Kassenabschluss zum Drucken, Einlass je Gerät ausgewiesen |
 | 1.9 | Verbindung prüfen: sagt, warum ein Abgleich klemmt |
