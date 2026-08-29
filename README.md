@@ -40,12 +40,25 @@ Zierde: es gibt dann nichts, worüber jemand versehentlich wegnavigiert.
 Wer nur eine Verknüpfung will, zieht das Symbol links in der Adresszeile auf
 den Schreibtisch.
 
-Das Zeichen liegt als `favicon.svg` bei, die abgeleiteten Größen entstehen
-daraus. Daneben liegt `favicon-b.svg`, ein zweiter Entwurf: statt der Karte
-das Suchmuster eines QR-Codes, das bis hinunter zu sechzehn Punkten trägt, wo
-der erste zum Fleck wird. Wer tauscht, benennt die Dateien um und erzeugt die
-PNG-Größen neu. Aus einer heruntergeladenen Datei heraus greifen Symbol und
-Einrichtung nicht — dafür braucht es die Adresse.
+### Das Symbol
+
+Auf dem Schreibtisch und dem Home-Bildschirm steht das gezeichnete Symbol des
+Vereins: die goldene Karte mit dem QR-Code in der grünen Wanne. Es liegt als
+`symbol-quelle.png` (1024 Punkte) bei; daraus entstehen `icon-512.png`,
+`icon-192.png`, `icon-32.png`, `apple-touch-icon.png` und
+`icon-maskable-512.png`. Das letzte hat rundum Luft, weil Android sich aus dem
+Symbol einen Kreis oder ein Kleeblatt schneidet, wie es dem Gerät gefällt.
+
+Im Reiter des Browsers ist es anders. Dort bleiben sechzehn Punkte, und ein
+gerendertes Bild wird auf sechzehn Punkten zu einem Fleck — die Karte, die
+Wanne, der Wagen, alles fällt zusammen. Dafür liegt `favicon.svg` bei, eine
+flache Zeichnung derselben Sache in denselben Farben: sie trägt bis ganz
+hinunter. Der Reiter nimmt sie, der Schreibtisch das Bild. Daneben liegt
+`favicon-b.svg`, ein zweiter flacher Entwurf mit dem Suchmuster eines
+QR-Codes statt der Karte.
+
+Aus einer heruntergeladenen Datei heraus greifen Symbol und Einrichtung
+nicht — dafür braucht es die Adresse.
 
 ## Am Eingang
 
@@ -354,7 +367,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **2.3** | Druck auf Etiketten- und Thermodrucker |
+| **2.4** | gezeichnetes Symbol des Vereins auf Schreibtisch und Home-Bildschirm |
+| 2.3 | Druck auf Etiketten- und Thermodrucker |
 | 2.2 | eigenes Symbol, als Programm einrichtbar |
 | 2.1 | Höchstzahlen je Kategorie, eine Übersicht statt dreier |
 | 2.0 | Kassenabschluss zum Drucken, Einlass je Gerät ausgewiesen |
