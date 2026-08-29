@@ -498,9 +498,20 @@ td.n,th.n{text-align:right}
       </p>
       <div class="reihe">
         <button class="knopf grow" id="btnExport">Exportieren</button>
-        <button class="knopf grow" id="btnImport">Importieren</button>
+        <button class="knopf voll grow" id="btnAbgleich">Zusammenführen</button>
+      </div>
+      <p class="muted" style="margin:10px 0 0">
+        <b>Zusammenführen</b> nimmt eine Sicherung des anderen Geräts und legt sie
+        über den eigenen Stand: was dort verkauft und hier eingelassen wurde,
+        ergibt zusammen den ganzen Abend. Nichts wird dabei gelöscht.
+      </p>
+      <div class="reihe" style="margin-top:12px">
+        <button class="knopf klein" id="btnImport">Stattdessen ersetzen</button>
+        <span class="muted grow">Wirft alles hier Gespeicherte weg und übernimmt
+          die Datei. Für ein frisch eingerichtetes Gerät.</span>
       </div>
       <input type="file" id="dateiEin" accept="application/json" class="hide">
+      <div id="abgleichBericht" class="hide" style="margin-top:12px"></div>
       <div id="speicherHinweis" class="hinweis hide"></div>
     </div>
   </div>
@@ -1052,6 +1063,58 @@ function zeichneBuchung(){
   else hin.classList.add("hide");
 }
 
+/* Der Abgleich verändert die Abrechnung. Was er getan hat, muss nachlesbar
+   sein — und Widersprüche gehören genannt, nicht weggerechnet. */
+function zeichneBericht(b){
+  var kasten=$("abgleichBericht");
+  if(!b){ kasten.classList.add("hide"); kasten.innerHTML=""; return; }
+
+  if(b.fehler){
+    kasten.className="hinweis";
+    kasten.textContent=b.fehler;
+    kasten.classList.remove("hide");
+    return;
+  }
+
+  var zeilen=[
+    ["Karten übernommen", b.ticketsNeu],
+    ["Einlässe übernommen", b.einlaesse],
+    ["Nachträge geklärt", b.geklaert],
+    ["Stornos übernommen", b.stornos],
+    ["Veranstaltungen neu", b.eventsNeu],
+    ["Kategorien neu", b.katsNeu],
+  ].filter(function(z){ return z[1]>0; });
+
+  var h='<div class="karte" style="margin:0"><div class="titel"><h2>Abgleich</h2>'+
+        '<button class="knopf klein" id="btnBerichtZu">Schließen</button></div>'+
+        '<div class="inhalt">';
+
+  h += zeilen.length
+    ? '<table>'+zeilen.map(function(z){
+        return '<tr><td>'+esc(z[0])+'</td><td class="n mono">'+z[1]+'</td></tr>';
+      }).join("")+'</table>'
+    : '<div class="muted">Nichts zu übernehmen — die Sicherung enthielt nichts, '+
+      'was hier nicht schon steht.</div>';
+
+  if(b.widersprueche.length){
+    h += '<div class="hinweis" style="margin-top:12px"><b>'+
+         b.widersprueche.length+
+         (b.widersprueche.length===1?' Widerspruch':' Widersprüche')+
+         '</b> — bitte ansehen, hier wurde nichts stillschweigend entschieden:'+
+         '<div style="margin-top:8px">'+
+         b.widersprueche.map(function(w){
+           return '<div style="margin-bottom:6px"><span class="mono">'+esc(w.code)+
+                  '</span><br>'+esc(w.text)+'</div>';
+         }).join("")+'</div></div>';
+  }
+
+  h += '</div></div>';
+  kasten.className="";
+  kasten.innerHTML=h;
+  kasten.classList.remove("hide");
+  $("btnBerichtZu").addEventListener("click",function(){ zeichneBericht(null); });
+}
+
 function zeichneNachtragen(){
   var kn=$("wahlNachtragen").querySelectorAll("button");
   for(var i=0;i<kn.length;i++){
@@ -1385,6 +1448,154 @@ function zeichneZahlen(){
     : '<tr><td class="muted">Noch nichts verkauft.</td></tr>';
 }
 
+/* ========================= Zusammenführen =========================
+
+   Zwei Geräte an einem Abend: drinnen wird verkauft, draußen eingelassen.
+   Danach weiß der eine, wer bezahlt hat, und der andere, wer gekommen ist.
+   Erst beides zusammen ergibt den Abend.
+
+   Nicht "die neuere Datei gewinnt" — das löscht, was das andere Gerät in
+   der Zwischenzeit getan hat. Sondern Karte für Karte: hier verkauft, dort
+   eingelöst, zusammen eine verkaufte und eingelöste Karte.
+
+   Die Veranstaltungen werden dabei über das Kürzel zusammengebracht, nicht
+   über ihre Kennung: die vergibt jedes Gerät für sich, zwei Geräte haben
+   für dasselbe Sommerfest verschiedene. Das Kürzel steht im Code jeder
+   Karte und ist mitsigniert — es ist das einzig Verlässliche. */
+
+function zusammenfuehren(roh){
+  var fremd=migriere(roh);
+
+  /* Ohne denselben Schlüssel wären die übernommenen Karten hier nicht
+     prüfbar: ihre Signaturen ließen sich nicht nachrechnen, und am Einlass
+     stünde bei jeder "Gefälscht". Lieber gar nicht als falsch. */
+  if(fremd.schluessel!==db.schluessel){
+    return {fehler:"Diese Sicherung wurde mit einem anderen Schlüssel geschrieben. "+
+                   "Die Karten darin ließen sich hier nicht prüfen. Trage auf beiden "+
+                   "Geräten denselben Schlüssel ein und erzeuge die Sicherung neu."};
+  }
+
+  var b={eventsNeu:0, katsNeu:0, ticketsNeu:0, einlaesse:0, stornos:0,
+         geklaert:0, widersprueche:[]};
+
+  /* --- Veranstaltungen über das Kürzel --- */
+  var evAbbildung={};
+  fremd.events.forEach(function(fe){
+    var le=null;
+    for(var i=0;i<db.events.length;i++) if(db.events[i].kuerzel===fe.kuerzel) le=db.events[i];
+    if(!le){
+      var id=fe.id;
+      while(db.events.some(function(e){return e.id===id;}))
+        id="e"+Date.now()+Math.floor(Math.random()*999);
+      le={id:id, name:fe.name, datum:fe.datum, kuerzel:fe.kuerzel, ort:fe.ort||""};
+      db.events.push(le); b.eventsNeu++;
+    }
+    evAbbildung[fe.id]=le.id;
+  });
+
+  /* --- Kategorien über den Namen --- */
+  fremd.kats.forEach(function(fk){
+    if(!db.kats.some(function(k){return k.name===fk.name;})){
+      db.kats.push({id:"k"+Date.now()+Math.floor(Math.random()*999), name:fk.name, cent:fk.cent});
+      b.katsNeu++;
+    }
+  });
+
+  /* --- Karten --- */
+  var kennt={};
+  db.tickets.forEach(function(t){ kennt[t.evId+"|"+t.nummer]=t; });
+
+  fremd.tickets.forEach(function(ft){
+    var evId=evAbbildung[ft.evId];
+    if(!evId) return;
+    var schluessel=evId+"|"+ft.nummer;
+    var lt=kennt[schluessel];
+
+    if(!lt){
+      var neu={};
+      for(var f in ft) if(Object.prototype.hasOwnProperty.call(ft,f)) neu[f]=ft[f];
+      neu.evId=evId;
+      db.tickets.push(neu); kennt[schluessel]=neu; b.ticketsNeu++;
+      return;
+    }
+
+    /* Zwei Geräte ohne eigenes Kassenzeichen vergeben beide die 0001. Die
+       Signatur hilft hier nicht weiter: sie wird aus Kürzel und Nummer
+       gerechnet und ist dann zwangsläufig dieselbe. Zwei verschiedene
+       Verkäufe tragen also denselben Code — auf Papier nicht mehr
+       auseinanderzuhalten.
+
+       Erkennen lässt es sich am Inhalt: zwei echte Verkäufe mit derselben
+       Nummer, aber verschiedener Kategorie, verschiedenem Preis oder
+       verschiedener Uhrzeit können nicht dieselbe Karte sein. Sie hier
+       zusammenzuwerfen hieße, einen Verkauf aus der Abrechnung zu
+       streichen. Also wird gemeldet und nichts angefasst. */
+    if(lt.sig!==ft.sig){
+      b.widersprueche.push({code:ticketCode(lt),
+        text:"Dieselbe Nummer, zwei verschiedene Signaturen. Die Sicherung stammt "+
+             "wohl aus einer anderen Kasse."});
+      return;
+    }
+    if(!lt.nachgetragen && !ft.nachgetragen &&
+       (lt.kat!==ft.kat || lt.cent!==ft.cent || lt.erstellt!==ft.erstellt)){
+      b.widersprueche.push({code:ticketCode(lt),
+        text:"Zwei verschiedene Verkäufe unter derselben Nummer: hier "+
+             esc(lt.kat)+" für "+eur(lt.cent)+" €, in der Sicherung "+
+             esc(ft.kat)+" für "+eur(ft.cent)+" €. Beide Geräte haben ohne eigenes "+
+             "Kassenzeichen verkauft. Der zweite Verkauf muss von Hand nachgetragen "+
+             "werden; hier bleibt der eigene stehen."});
+      return;
+    }
+
+    /* Ein Nachtrag kennt weder Kategorie noch Preis — beides steht nur beim
+       Gerät, das die Karte verkauft hat. Kommt es hier an, wird der Nachtrag
+       aufgelöst und die Karte zählt wieder zu den Einnahmen. */
+    if(lt.nachgetragen && !ft.nachgetragen){
+      lt.kat=ft.kat; lt.cent=ft.cent; lt.gast=ft.gast;
+      lt.erstellt=ft.erstellt||lt.erstellt;
+      delete lt.nachgetragen;
+      b.geklaert++;
+    }
+
+    var einHier=lt.status==="eingeloest", einDort=ft.status==="eingeloest";
+    var stoHier=lt.status==="storniert",  stoDort=ft.status==="storniert";
+
+    if(einHier && stoDort){
+      b.widersprueche.push({code:ticketCode(lt),
+        text:"Hier eingelöst, in der Sicherung storniert. Jemand ist mit einer "+
+             "stornierten Karte hineingekommen."});
+    } else if(stoHier && einDort){
+      b.widersprueche.push({code:ticketCode(lt),
+        text:"Hier storniert, in der Sicherung eingelöst. Jemand ist mit einer "+
+             "stornierten Karte hineingekommen."});
+      /* Der Einlass ist geschehen; das ist die Tatsache, die zählt. */
+      lt.status="eingeloest"; lt.eingeloestAm=ft.eingeloestAm||Date.now();
+    } else if(einDort && !einHier){
+      lt.status="eingeloest"; lt.eingeloestAm=ft.eingeloestAm||Date.now(); b.einlaesse++;
+    } else if(einHier && einDort){
+      /* Zweimal eingelassen heißt: einmal eingelassen, und zwar zuerst dort,
+         wo es früher war. */
+      lt.eingeloestAm=Math.min(lt.eingeloestAm||Infinity, ft.eingeloestAm||Infinity);
+    } else if(stoDort && !stoHier){
+      lt.status="storniert"; b.stornos++;
+    }
+  });
+
+  /* --- Nummernstände: der höhere gewinnt, damit keine Nummer zweimal
+         vergeben wird --- */
+  for(var fid in fremd.nummern){
+    if(!Object.prototype.hasOwnProperty.call(fremd.nummern,fid)) continue;
+    var lid=evAbbildung[fid]; if(!lid) continue;
+    if((fremd.nummern[fid]||0) > (db.nummern[lid]||0)) db.nummern[lid]=fremd.nummern[fid];
+  }
+
+  /* Schlüssel, Kassenzeichen, Veranstalter und Druckwahl bleiben, wie sie
+     hier eingestellt sind. Besonders das Kassenzeichen: von drüben
+     übernommen, vergäben beide Geräte fortan dieselben Nummern. */
+
+  return b;
+}
+
 /* =========================== Einstellungen =========================== */
 function zeichneEvents(){
   var s=$("evSel");
@@ -1607,9 +1818,17 @@ function start(){
     a.click();
     setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
   });
-  $("btnImport").addEventListener("click",function(){ $("dateiEin").click(); });
+  var dateiZweck="abgleich";
+  $("btnAbgleich").addEventListener("click",function(){
+    dateiZweck="abgleich"; $("dateiEin").click();
+  });
+  $("btnImport").addEventListener("click",function(){
+    dateiZweck="ersetzen"; $("dateiEin").click();
+  });
+
   $("dateiEin").addEventListener("change",function(){
     var f=this.files[0]; this.value=""; if(!f) return;
+    var zweck=dateiZweck;
     var r=new FileReader();
     r.onload=function(){
       var gelesen;
@@ -1618,15 +1837,30 @@ function start(){
       if(!gelesen || !Array.isArray(gelesen.tickets) || !Array.isArray(gelesen.events)){
         alert("Das ist keine Sicherung der Ticketkasse."); return;
       }
-      if(!confirm("Die vorhandenen Daten werden ersetzt. Fortfahren?")) return;
-      db=migriere(gelesen);
-      if(!db.aktiv && db.events.length) db.aktiv=db.events[0].id;
-      korb={}; pruefungen=[]; sichern();
-      $("schluessel").value=db.schluessel;
-      $("vName").value=db.veranstalter.name||"";
-      $("vZusatz").value=db.veranstalter.zusatz||"";
-      $("kassenzeichen").value=db.kassenzeichen||"";
-      allesZeichnen(); zeichnePruefLog(); melden("Daten geladen");
+
+      if(zweck==="ersetzen"){
+        if(!confirm("Alles auf diesem Gerät wird weggeworfen und durch die Datei "+
+                    "ersetzt. Fortfahren?")) return;
+        db=migriere(gelesen);
+        if(!db.aktiv && db.events.length) db.aktiv=db.events[0].id;
+        korb={}; pruefungen=[]; sichern();
+        $("schluessel").value=db.schluessel;
+        $("vName").value=db.veranstalter.name||"";
+        $("vZusatz").value=db.veranstalter.zusatz||"";
+        $("kassenzeichen").value=db.kassenzeichen||"";
+        zeichneBericht(null);
+        allesZeichnen(); zeichnePruefLog(); melden("Daten ersetzt");
+        return;
+      }
+
+      var bericht=zusammenfuehren(gelesen);
+      if(!bericht.fehler){
+        if(!db.aktiv && db.events.length) db.aktiv=db.events[0].id;
+        sichern();
+        allesZeichnen();
+        melden("Abgleich fertig");
+      }
+      zeichneBericht(bericht);
     };
     r.readAsText(f);
   });
