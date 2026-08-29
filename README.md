@@ -14,9 +14,14 @@ gerechnet mit dem Schlüssel aus den Einstellungen). Ohne den Schlüssel
 lässt sich keine gültige Karte malen; ohne die gespeicherte Liste lässt
 sich keine zweimal einlösen.
 
-Gerechnet wird in ganzen Cent. Die Daten liegen im Speicher des Browsers
-— pro Gerät getrennt, nirgends sonst. Wer das Gerät wechselt oder den
-Abend sichern will, nimmt *Einstellungen → Sicherung → Exportieren*.
+Gerechnet wird in ganzen Cent. Die Daten liegen im Speicher des Browsers,
+pro Gerät getrennt. Wer das Gerät wechselt oder den Abend sichern will,
+nimmt *Einstellungen → Sicherung → Exportieren*.
+
+Sollen mehrere Geräte denselben Abend führen, gibt es zwei Wege: die
+Sicherung von Hand herüberreichen und *zusammenführen*, oder die **Ablage**
+im eigenen Drive, aus der sich die Geräte selbst versorgen. Beides ist
+Zugabe — ohne das arbeitet die Kasse für sich allein weiter.
 
 ## Am Eingang
 
@@ -104,21 +109,28 @@ sie ein und trägt sie nach.
 
 Was dafür zu tun ist:
 
-1. Auf beiden Geräten denselben **Schlüssel** eintragen (*Einstellungen →
-   Schlüssel*) und dieselbe Veranstaltung mit demselben **Kürzel** anlegen.
-   Bequemer: auf dem ersten Gerät exportieren, auf dem zweiten importieren.
+1. Beide Geräte auf denselben Stand bringen. Am einfachsten über die
+   **Ablage** — siehe *Ein zweites Gerät einrichten* weiter unten; ein leeres
+   Gerät braucht dafür nur Adresse und Zugangswort. Ohne Ablage: auf dem
+   ersten Gerät exportieren, auf dem zweiten *ersetzen*, und danach das
+   Kassenzeichen ändern.
 2. Verkauft mehr als ein Gerät, jedem ein eigenes **Kassenzeichen** geben —
    einen Buchstaben. Er steht in der Nummer (`SF26-B0007`) und verhindert,
    dass zwei Geräte dieselbe Nummer vergeben.
 
-Was dabei bleibt: jedes Gerät kennt nur seine eigenen Einlässe. Wird dieselbe
-Karte an zwei verschiedenen Türen vorgezeigt, fällt das nicht auf — dafür
-bräuchte es einen gemeinsamen Speicher. Bei einer Tür genügt das hier.
+Was dabei bleibt: jedes Gerät kennt zunächst nur seine eigenen Einlässe.
+Wird dieselbe Karte im selben Augenblick an zwei verschiedenen Türen
+vorgezeigt, fällt das nicht auf — beide lassen ein. Mit der Ablage weiß es
+das zweite Gerät beim nächsten Abgleich, also nach Sekunden bis Minuten;
+ohne sie erst am Ende des Abends. Wirklich ausschließen ließe es sich nur
+mit einem Speicher, an dem der Einlass hängt — und der stünde still, sobald
+das Netz wackelt. Bei einer Tür stellt sich die Frage nicht.
 
-Ebenso kann ein Gerät nicht wissen, ob eine Karte anderswo **storniert**
-wurde. Wer das ausschließen muss, stellt *Einstellungen → Einlass* auf
-**Abweisen** und spielt vor dem Einlass die Liste des verkaufenden Geräts
-ein. Dann kommt nur hinein, was dort steht.
+Dasselbe gilt für eine anderswo **stornierte** Karte: bis zum nächsten
+Abgleich weiß die Tür nichts davon. Wer das sicher ausschließen muss,
+stellt *Einstellungen → Einlass* auf **Abweisen** und bringt vorher den
+Stand des verkaufenden Geräts herüber. Dann kommt nur hinein, was dort
+steht.
 
 Die nachgetragenen Karten stehen in der Übersicht für sich. Sie zählen nicht
 zu den Einnahmen dieses Geräts, denn ihr Preis steht nicht im Code — er
