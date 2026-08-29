@@ -491,6 +491,34 @@ td.n,th.n{text-align:right}
   </div>
 
   <div class="karte">
+    <div class="titel"><h2>Ablage</h2></div>
+    <div class="inhalt">
+      <p class="muted" style="margin:0 0 12px">
+        Gleicht die Geräte über eine Datei in eurem Google&nbsp;Drive ab. Ohne
+        Eintrag hier arbeitet die Kasse wie bisher allein weiter — die Ablage
+        ist eine Zugabe, keine Voraussetzung. Wie sie eingerichtet wird, steht
+        in <span class="mono">ablage.gs</span> im Quelltext.
+      </p>
+      <label class="feld"><span>Adresse der Web-App</span>
+        <input id="wolkeAdresse" class="mono" placeholder="https://script.google.com/macros/s/…/exec"></label>
+      <label class="feld" style="margin-top:8px"><span>Zugangswort</span>
+        <input id="wolkeWort" placeholder="wie im Skript eingetragen"></label>
+      <label class="feld" style="margin-top:8px"><span>Wie oft</span>
+        <select id="wolkeIntervall">
+          <option value="0">Nur von Hand</option>
+          <option value="1">Jede Minute</option>
+          <option value="5">Alle fünf Minuten</option>
+          <option value="15">Alle fünfzehn Minuten</option>
+        </select></label>
+      <div class="reihe" style="margin-top:10px">
+        <button class="knopf" id="btnWolkeSpeichern">Speichern</button>
+        <button class="knopf voll" id="btnWolkeJetzt">Jetzt abgleichen</button>
+      </div>
+      <div id="wolkeStand" class="muted" style="margin-top:10px">Keine Ablage eingetragen.</div>
+    </div>
+  </div>
+
+  <div class="karte">
     <div class="titel"><h2>Sicherung</h2></div>
     <div class="inhalt">
       <p class="muted" style="margin:0 0 12px">
@@ -856,6 +884,7 @@ function leereDaten(){
     veranstalter:{name:"Fering Ferian e.V.", zusatz:"Heimatpflege auf Föhr"},
     schluessel:zufallsSchluessel(), aktiv:null, layout:"mehrfach",
     nachtragen:true, kassenzeichen:"",
+    ablage:{adresse:"", wort:"", intervall:0},
   };
 }
 
@@ -893,6 +922,10 @@ function migriere(d){
   neu.aktiv = d.aktiv || d.activeEvent || null;
   neu.layout = (d.layout==="einzeln"||d.layout==="single") ? "einzeln" : "mehrfach";
   neu.nachtragen = (d.nachtragen!==false);
+  if(d.ablage&&typeof d.ablage==="object"){
+    neu.ablage={adresse:String(d.ablage.adresse||""), wort:String(d.ablage.wort||""),
+                intervall:Number(d.ablage.intervall)||0};
+  }
   neu.kassenzeichen = /^[A-Z]$/.test(String(d.kassenzeichen||"").toUpperCase())
                     ? String(d.kassenzeichen).toUpperCase() : "";
 
@@ -989,6 +1022,14 @@ function uhrzeit(ts){
 function melden(t){
   var e=$("meldung"); e.textContent=t; e.classList.add("an");
   clearTimeout(e._z); e._z=setTimeout(function(){e.classList.remove("an");},2000);
+}
+
+/* Ein- und Mehrzahl, wie im Vereinsmanager. Ohne das steht dort "1
+   Einlässe übernommen" — in einem Programm, das sonst auf ordentliche
+   Sprache achtet, ein ärgerlicher Bruch. Null ergibt gar nichts, damit
+   sich die Aufzählung selbst zusammenstreicht. */
+function mehrzahl(n,eins,viele){
+  return n ? n+" "+(Number(n)===1?eins:viele) : "";
 }
 
 var LAGE={offen:"offen", eingeloest:"eingelöst", storniert:"storniert"};
@@ -1152,6 +1193,7 @@ function ticketsErzeugen(){
   korb={}; $("gast").value="";
   sichern();
   zeichneKacheln(); zeichneBuchung(); zeichneListe(); zeichneZahlen();
+  wolkeVormerken();
   drucken(neue);
 }
 
@@ -1265,7 +1307,7 @@ function pruefe(roh){
 
   t.status="eingeloest"; t.eingeloestAm=Date.now(); sichern();
   befund("b-ja","Gültig", t.kat+(t.gast?" · "+t.gast:"")+" · "+ev.name);
-  zeichneListe(); zeichneZahlen();
+  zeichneListe(); zeichneZahlen(); wolkeVormerken();
 }
 
 function zeichnePruefLog(){
@@ -1596,6 +1638,133 @@ function zusammenfuehren(roh){
   return b;
 }
 
+/* ======================= Ablage in der Wolke =======================
+
+   Der Abgleich von eben, nur holt sich das Gerät die Datei selbst. Die
+   Ablage ist dabei bewusst dumm: sie verwahrt einen Stand und zählt mit,
+   wie oft er geschrieben wurde. Gerechnet wird hier.
+
+   Der Ablauf ist immer derselbe:
+
+     holen  →  zusammenführen  →  zurücklegen
+
+   Beim Zurücklegen sagt das Gerät, auf welchem Zählerstand es aufsetzt.
+   Hat inzwischen ein anderes geschrieben, lehnt die Ablage ab und schickt
+   den neuen Stand mit; dann wird noch einmal gerechnet. Ohne das ginge
+   verloren, was das andere Gerät in der Zwischenzeit getan hat — genau der
+   Fehler, den eine Sicherung im Minutentakt sonst macht.
+
+   Alles bleibt dabei zuerst hier. Fällt das Netz aus, arbeitet die Kasse
+   weiter und gleicht später ab; es geht nichts verloren, es dauert nur
+   länger, bis beide Geräte dasselbe wissen. */
+
+var wolkeLaeuft=false, wolkeUhr=null, wolkeMerker=null, wolkeStandText="";
+
+function wolkeBereit(){ return !!(db.ablage && db.ablage.adresse); }
+
+function zeichneWolke(){
+  var an=wolkeBereit();
+  $("wolkeStand").textContent = wolkeStandText ||
+    (an ? "Noch nicht abgeglichen." : "Keine Ablage eingetragen.");
+  $("btnWolkeJetzt").disabled = !an || wolkeLaeuft;
+  if($("wolkeIntervall").value !== String((db.ablage&&db.ablage.intervall)||0))
+    $("wolkeIntervall").value = String((db.ablage&&db.ablage.intervall)||0);
+}
+
+function wolkeSagen(text){ wolkeStandText=text; zeichneWolke(); }
+
+/* Absichtlich text/plain: bei jedem anderen Inhaltstyp schickt der Browser
+   vorab eine Anfrage, die Apps Script nicht beantwortet — der Aufruf bräche
+   ab, bevor er beginnt. Das Skript liest den Text selbst als JSON. */
+function wolkeRufen(anfrage){
+  return fetch(db.ablage.adresse, {
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify(anfrage),
+    redirect:"follow",
+  }).then(function(a){
+    if(!a.ok) throw new Error("Die Ablage antwortet mit "+a.status+".");
+    return a.json();
+  });
+}
+
+/* Was hochgeht, ist der eigene Stand ohne die Zugangsdaten: die Adresse und
+   das Zugangswort gehören auf das Gerät, nicht in die Datei, die sie
+   schützt. Das Kassenzeichen bleibt ebenfalls hier — es ist die Kennung
+   dieses Geräts und darf nicht wandern. */
+function wolkePaket(){
+  var k={};
+  for(var f in db) if(Object.prototype.hasOwnProperty.call(db,f)) k[f]=db[f];
+  delete k.ablage;
+  return k;
+}
+
+function wolkeAbgleichen(versuch){
+  versuch=versuch||1;
+  if(!wolkeBereit()) return Promise.resolve();
+  if(wolkeLaeuft && versuch===1) return Promise.resolve();
+  wolkeLaeuft=true; zeichneWolke(); wolkeSagen("Gleicht ab …");
+
+  return wolkeRufen({aktion:"holen", wort:db.ablage.wort})
+    .then(function(a){
+      if(a.fehler) throw new Error(a.fehler);
+      var bericht=null;
+      if(a.daten){
+        bericht=zusammenfuehren(a.daten);
+        if(bericht.fehler) throw new Error(bericht.fehler);
+      }
+      sichern();
+      return wolkeRufen({aktion:"legen", wort:db.ablage.wort, basis:a.stand,
+                         daten:wolkePaket(), geraet:db.kassenzeichen||"ohne Zeichen"})
+        .then(function(b){ return {ablegen:b, bericht:bericht}; });
+    })
+    .then(function(e){
+      if(e.ablegen.fehler==="veraltet"){
+        /* Ein anderes Gerät war schneller. Noch einmal von vorn — diesmal
+           mit dessen Stand als Grundlage. Zweimal hintereinander ist bei
+           zwei Geräten kaum zu erwarten; dann wartet es bis zum nächsten Mal. */
+        if(versuch<3){ wolkeLaeuft=false; return wolkeAbgleichen(versuch+1); }
+        throw new Error("Die Ablage war mehrfach in Benutzung. Nächster Versuch später.");
+      }
+      if(e.ablegen.fehler) throw new Error(e.ablegen.fehler);
+
+      allesZeichnen();
+      var b=e.bericht;
+      var dazu = b && (b.ticketsNeu||b.einlaesse||b.geklaert||b.stornos)
+        ? " · "+[mehrzahl(b.ticketsNeu,"Karte","Karten"),
+                 mehrzahl(b.einlaesse,"Einlass","Einlässe"),
+                 mehrzahl(b.geklaert,"Nachtrag","Nachträge"),
+                 mehrzahl(b.stornos,"Storno","Stornos")]
+              .filter(Boolean).join(", ")+" übernommen"
+        : "";
+      wolkeSagen("Abgeglichen "+uhrzeit(Date.now())+" Uhr"+dazu);
+      if(b && b.widersprueche && b.widersprueche.length) zeichneBericht(b);
+      return true;
+    })
+    .catch(function(f){
+      wolkeSagen("Nicht abgeglichen: "+f.message+" · Die Kasse arbeitet weiter, "+
+                 "der nächste Versuch folgt.");
+      return false;
+    })
+    .then(function(erg){ wolkeLaeuft=false; zeichneWolke(); return erg; });
+}
+
+/* Nach einem Verkauf oder Einlass wird nicht sofort losgelaufen: an der
+   Kasse fallen mehrere Karten hintereinander an, und für jede eine Anfrage
+   zu stellen wäre Unfug. Drei Sekunden Ruhe genügen. */
+function wolkeVormerken(){
+  if(!wolkeBereit() || !db.ablage.intervall) return;
+  clearTimeout(wolkeMerker);
+  wolkeMerker=setTimeout(function(){ wolkeAbgleichen(); }, 3000);
+}
+
+function wolkeUhrStellen(){
+  clearInterval(wolkeUhr); wolkeUhr=null;
+  var minuten=(db.ablage&&db.ablage.intervall)||0;
+  if(!minuten || !wolkeBereit()) return;
+  wolkeUhr=setInterval(function(){ wolkeAbgleichen(); }, minuten*60000);
+}
+
 /* =========================== Einstellungen =========================== */
 function zeichneEvents(){
   var s=$("evSel");
@@ -1642,7 +1811,7 @@ function zeichneKats(){
 
 function allesZeichnen(){
   zeichneEvents(); zeichneKats(); zeichneKacheln(); zeichneBuchung();
-  zeichneLayoutWahl(); zeichneNachtragen(); zeichneListe(); zeichneZahlen();
+  zeichneLayoutWahl(); zeichneNachtragen(); zeichneWolke(); zeichneListe(); zeichneZahlen();
 }
 
 /* ============================ Verdrahtung ============================ */
@@ -1668,8 +1837,14 @@ function start(){
   $("vName").value=db.veranstalter.name||"";
   $("vZusatz").value=db.veranstalter.zusatz||"";
   $("kassenzeichen").value=db.kassenzeichen||"";
+  $("wolkeAdresse").value=(db.ablage&&db.ablage.adresse)||"";
+  $("wolkeWort").value=(db.ablage&&db.ablage.wort)||"";
   allesZeichnen();
   zeichnePruefLog();
+  wolkeUhrStellen();
+  /* Beim Öffnen einmal holen: das Gerät soll nicht mit einem Stand von
+     gestern in den Abend gehen. */
+  if(wolkeBereit()) wolkeAbgleichen();
 
   document.querySelectorAll("nav button").forEach(function(b){
     b.addEventListener("click",function(){ reiterZeigen(b.getAttribute("data-reiter")); });
@@ -1807,6 +1982,27 @@ function start(){
   $("btnVeranstalter").addEventListener("click",function(){
     db.veranstalter={name:$("vName").value.trim(), zusatz:$("vZusatz").value.trim()};
     sichern(); melden("Veranstalter gespeichert");
+  });
+
+  /* ---- Ablage ---- */
+  $("btnWolkeSpeichern").addEventListener("click",function(){
+    var a=$("wolkeAdresse").value.trim();
+    /* Von einer https-Seite lässt der Browser unverschlüsselte Aufrufe nicht
+       durch — außer zum eigenen Rechner, den er als vertrauenswürdig ansieht.
+       Deshalb https, oder eine Ablage auf localhost. */
+    if(a && !/^https:\/\//.test(a) && !/^http:\/\/(localhost|127\.0\.0\.1)(:|\/)/.test(a)){
+      alert("Die Adresse muss mit https:// beginnen. Sie steht in Apps Script "+
+            "unter Bereitstellen und endet auf /exec.");
+      return;
+    }
+    db.ablage={adresse:a, wort:$("wolkeWort").value.trim(),
+               intervall:Number($("wolkeIntervall").value)||0};
+    sichern(); wolkeUhrStellen(); wolkeSagen(""); zeichneWolke();
+    melden(a ? "Ablage gespeichert" : "Ablage entfernt");
+  });
+  $("btnWolkeJetzt").addEventListener("click",function(){ wolkeAbgleichen(); });
+  $("wolkeIntervall").addEventListener("change",function(){
+    db.ablage.intervall=Number(this.value)||0; sichern(); wolkeUhrStellen();
   });
 
   /* ---- Sicherung ---- */

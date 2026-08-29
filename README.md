@@ -95,6 +95,40 @@ abgelehnt: Karten aus einer anderen Kasse ließen sich hier nicht prüfen.
 übernimmt die Datei. Das ist der Weg, ein frisches Gerät einzurichten, und
 nicht der Weg, zwei Stände zusammenzubringen.
 
+## Ablage: der Abgleich von selbst
+
+Statt die Sicherung von Hand herüberzuschicken, können die Geräte sie sich
+selbst holen. Dafür liegt `ablage.gs` bei — ein kleines Google-Apps-Script,
+das als Web-App veröffentlicht wird und in *deinem* Drive eine einzige Datei
+führt. Die Geräte rufen nur diese Adresse auf: keine Anmeldung am Eingang,
+kein Google-Konto auf fremden Handys, und die Daten bleiben in eurem Drive.
+
+Die Einrichtung steht oben in `ablage.gs`. Danach kommen Adresse und
+Zugangswort in der Ticketkasse unter *Einstellungen → Ablage* hinein, dazu
+wie oft abgeglichen werden soll.
+
+Der Ablauf ist immer derselbe:
+
+    holen  →  zusammenführen  →  zurücklegen
+
+Beim Zurücklegen nennt das Gerät den Zählerstand, auf dem es aufsetzt. Hat
+inzwischen ein anderes geschrieben, lehnt die Ablage ab und schickt den
+neuen Stand mit; dann wird noch einmal gerechnet. Ohne diesen Schritt ginge
+verloren, was das andere Gerät in der Zwischenzeit getan hat — der Fehler,
+den eine schlichte Sicherung im Minutentakt macht.
+
+Alles bleibt dabei zuerst auf dem Gerät. Fällt das Netz aus, arbeiten Kasse
+und Einlass weiter und gleichen später ab. Es geht nichts verloren; es
+dauert nur länger, bis beide dasselbe wissen. Das Intervall ist deshalb
+unkritisch — eine Karte, die das Türgerät noch nicht kennt, wird ohnehin
+nachgetragen.
+
+Wer die Adresse **und** das Zugangswort hat, kann den ganzen Abend lesen und
+überschreiben. Beides gehört auf die Geräte des Vereins und nicht in eine
+Rundmail. Was hochgeladen wird, ist der Stand ohne diese Zugangsdaten und
+ohne das Kassenzeichen — das ist die Kennung des jeweiligen Geräts und darf
+nicht wandern.
+
 ## Herkunft
 
 Farben, Maße und Druckbild stammen aus dem Fering Vereinsmanager, der
