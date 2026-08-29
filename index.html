@@ -291,6 +291,26 @@ td.n,th.n{text-align:right}
   text-transform:uppercase;display:flex;align-items:center;justify-content:center;
 }
 
+/* ---- Kassenabschluss ---- */
+.bogen.bericht{padding:16mm 18mm}
+.bericht{font-family:'Newsreader',Georgia,serif;font-size:10.5pt;line-height:1.45;color:#000}
+.bericht .briefkopf{display:flex;justify-content:space-between;align-items:flex-start;
+  border-bottom:0.6pt solid #000;padding-bottom:3mm;margin-bottom:6mm}
+.bericht .wer{font-weight:600;font-size:12pt}
+.bericht .zusatz,.bericht .rechts{font-size:8.5pt}
+.bericht .titel{font-weight:600;font-size:13pt;margin-bottom:1mm}
+.bericht .titel.klein{font-size:11pt;margin-top:8mm}
+.bericht .unter{font-size:9pt;color:#333;margin-bottom:1mm}
+.bericht table{width:100%;border-collapse:collapse;margin-top:5mm;font-size:10pt}
+/* Schwarz, nicht das Graugrün des Bildschirms: kopiert oder gefaxt bleibt
+   davon sonst kaum etwas übrig. */
+.bericht th{text-align:left;font-weight:400;font-size:8pt;text-transform:uppercase;
+  letter-spacing:.08em;color:#000;border-bottom:0.6pt solid #000;padding-bottom:1.5mm}
+.bericht td{padding:1.6mm 0;border-bottom:0.3pt solid #999}
+.bericht td.n,.bericht th.n{text-align:right;font-variant-numeric:tabular-nums}
+.bericht .fuss{margin-top:10mm;font-size:8pt;color:#444;
+  border-top:0.6pt solid #000;padding-top:2mm}
+
 /* ---- Etikettenbogen ---- */
 .bogen.etikett{padding:0}
 .etikettseite{
@@ -438,6 +458,17 @@ td.n,th.n{text-align:right}
     <div><b id="zEin">0</b><span>Plätze eingelöst</span></div>
     <div><b id="zSumme">0,00</b><span>Euro</span></div>
     <div id="kachelNach" class="hide"><b id="zNach">0</b><span>nachgetragen</span></div>
+  </div>
+
+  <div class="karte">
+    <div class="titel">
+      <h2>Kassenabschluss</h2>
+      <div class="reihe">
+        <button class="knopf klein" id="btnAbschlussDrucken">Drucken</button>
+        <button class="knopf voll" id="btnSchliessen">Kasse schließen</button>
+      </div>
+    </div>
+    <div class="inhalt"><div id="abschluss"></div></div>
   </div>
 
   <div class="karte">
@@ -717,7 +748,7 @@ td.n,th.n{text-align:right}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "1.9";
+var VERSION = "2.0";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
@@ -1019,6 +1050,9 @@ function leereDaten(){
     veranstalter:{name:"Fering Ferian e.V.", zusatz:"Heimatpflege auf Föhr"},
     schluessel:zufallsSchluessel(), aktiv:null, layout:"mehrfach",
     nachtragen:true, kassenzeichen:"", sammelkarte:false, ton:true,
+    /* Je Veranstaltung der Zeitpunkt, an dem die Kasse geschlossen wurde.
+       Eingelassen wird danach weiter — verkauft nicht mehr. */
+    geschlossen:{},
     /* Das verbreitetste Herma-Raster: 70 × 37 mm, 24 je Bogen, drei mal
        acht, randlos. Alle Maße in Millimetern und einstellbar, damit sich
        auf eine andere Packung umstellen lässt, ohne etwas umzubauen. */
@@ -1065,6 +1099,7 @@ function migriere(d){
   neu.nachtragen = (d.nachtragen!==false);
   neu.sammelkarte = !!d.sammelkarte;
   neu.ton = (d.ton!==false);
+  if(d.geschlossen&&typeof d.geschlossen==="object") neu.geschlossen=d.geschlossen;
   if(d.etikett&&typeof d.etikett==="object"){
     var e=neu.etikett;
     ["breite","hoehe","spalten","zeilen","randLinks","randOben","abstandX","abstandY"]
@@ -1382,7 +1417,8 @@ function zeichneBuchung(){
   $("buchung").innerHTML=h;
 
   var ev=aktivesEvent();
-  $("btnDrucken").disabled = (anzahl===0 || !ev);
+  var zu = !!(ev && db.geschlossen[ev.id]);
+  $("btnDrucken").disabled = (anzahl===0 || !ev || zu);
   $("btnDrucken").textContent = !anzahl
     ? "Tickets erzeugen und drucken"
     : db.sammelkarte
@@ -1392,6 +1428,9 @@ function zeichneBuchung(){
   var hin=$("kasseHinweis");
   if(!ev){ hin.textContent="Keine Veranstaltung aktiv. Lege sie unter Einstellungen an.";
            hin.classList.remove("hide"); }
+  else if(zu){ hin.textContent="Die Kasse für „"+ev.name+"“ ist geschlossen — verkauft "+
+                 "wird nicht mehr. Der Einlass läuft weiter. Wieder öffnen unter Tickets.";
+               hin.classList.remove("hide"); }
   else hin.classList.add("hide");
 }
 
@@ -1492,6 +1531,8 @@ function naechsteNummer(ev,plaetze){
 
 function ticketsErzeugen(){
   var ev=aktivesEvent(); if(!ev) return;
+  /* Der Knopf ist gesperrt; dies fängt den Weg über die Tastatur ab. */
+  if(db.geschlossen[ev.id]){ melden("Die Kasse ist geschlossen"); return; }
   var gast=$("gast").value.trim(), neue=[];
 
   /* Eine Karte für die ganze Buchung: eine Familie bekommt einen Code statt
@@ -1590,6 +1631,70 @@ function etikettenBogen(liste, nurRaster){
     h+='</div>';
   }
   return h;
+}
+
+/* Der Abschluss gehört zu Papier: die Kassenprüfung will ihn sehen, und ein
+   Bildschirmfoto ist kein Beleg. Gesetzt wie die Ausdrucke des
+   Vereinsmanagers — A4, Serifenschrift, feine schwarze Linien, Veranstalter
+   im Kopf. */
+function abschlussDrucken(){
+  var ev=aktivesEvent(); if(!ev){ melden("Keine Veranstaltung aktiv"); return; }
+  var d=abschlussDaten(ev), v=db.veranstalter||{};
+  var namen=Object.keys(d.nach).sort(), geraete=Object.keys(d.geraete).sort();
+
+  function zeile(a,b,c,e,f,fett){
+    var s=fett?' style="font-weight:600"':'';
+    return '<tr'+s+'><td>'+a+'</td><td class="n">'+b+'</td><td class="n">'+c+'</td>'+
+           '<td class="n">'+e+'</td><td class="n">'+f+'</td></tr>';
+  }
+
+  var h='<div class="bericht">'+
+    '<div class="briefkopf">'+
+      '<div><div class="wer">'+esc(v.name||"")+'</div>'+
+      '<div class="zusatz">'+esc(v.zusatz||"")+'</div></div>'+
+      '<div class="rechts">'+esc(zeitpunkt(Date.now()))+'</div>'+
+    '</div>'+
+    '<div class="titel">Kassenabschluss</div>'+
+    '<div class="unter">'+esc(ev.name)+
+      (ev.datum?' · '+esc(datumLang(ev.datum)):'')+
+      (ev.ort?' · '+esc(ev.ort):'')+' · Kürzel '+esc(ev.kuerzel)+'</div>'+
+    (d.zeit?'<div class="unter">Kasse geschlossen am '+esc(zeitpunkt(d.zeit))+'</div>'
+           :'<div class="unter">Kasse noch offen — dies ist ein Zwischenstand.</div>')+
+
+    '<table><tr><th>Kategorie</th><th class="n">verkauft</th><th class="n">eingelöst</th>'+
+    '<th class="n">offen</th><th class="n">Euro</th></tr>';
+
+  namen.forEach(function(k){
+    var z=d.nach[k];
+    h+=zeile(esc(k), z.verkauft, z.eingeloest, z.verkauft-z.eingeloest, eur(z.cent));
+  });
+  h+=zeile("Zusammen", d.summe.verkauft, d.summe.eingeloest-d.summe.nachgetragen,
+           d.summe.verkauft-(d.summe.eingeloest-d.summe.nachgetragen),
+           eur(d.summe.cent), true);
+  if(d.summe.nachgetragen)
+    h+=zeile("nachgetragen, anderswo verkauft","—",d.summe.nachgetragen,"—","—");
+  if(d.summe.storniert)
+    h+=zeile("storniert",d.summe.storniert,"—","—","—");
+  h+='</table>';
+
+  if(geraete.length){
+    h+='<div class="titel klein">Einlass nach Gerät</div>'+
+       '<table><tr><th>Gerät</th><th class="n">Plätze</th><th class="n">Karten</th>'+
+       '<th class="n">davon nachgetragen</th><th></th></tr>';
+    geraete.forEach(function(g){
+      var z=d.geraete[g];
+      h+=zeile(esc(geraeteName(g)), z.plaetze, z.karten, z.nachgetragen, "");
+    });
+    h+='</table>';
+  }
+
+  h+='<div class="fuss">Aufgestellt von der Ticketkasse '+VERSION+
+     '. Plätze, nicht Karten: eine Karte kann für mehrere gelten.</div></div>';
+
+  var bogen=$("bogen");
+  bogen.className="bogen bericht";
+  bogen.innerHTML=h;
+  setTimeout(function(){ window.print(); },80);
 }
 
 function ausrichtungDrucken(){
@@ -1731,7 +1836,8 @@ function pruefe(roh){
     var nachgetragen={
       evId:ev.id, kuerzel:ev.kuerzel, nummer:teile[1], sig:teile[2].toLowerCase(),
       kat:"", cent:null, plaetze:plaetzeAus(teile[1]), gast:"", status:"eingeloest",
-      erstellt:Date.now(), eingeloestAm:Date.now(), nachgetragen:true,
+      erstellt:Date.now(), eingeloestAm:Date.now(), eingeloestVon:db.kassenzeichen||"",
+      nachgetragen:true,
     };
     db.tickets.push(nachgetragen);
     /* Den eigenen Zähler mitziehen, damit dieses Gerät die Nummer nicht
@@ -1753,7 +1859,12 @@ function pruefe(roh){
            " · eingelassen "+zeitpunkt(t.eingeloestAm||Date.now())); return;
   }
 
-  t.status="eingeloest"; t.eingeloestAm=Date.now(); sichern();
+  t.status="eingeloest"; t.eingeloestAm=Date.now();
+  /* Welches Gerät eingelassen hat, steht künftig an der Karte. Ohne das
+     lässt sich am Ende nicht sagen, welche Tür wie viele durchgelassen
+     hat — und bei mehreren Türen ist das genau die Frage. */
+  t.eingeloestVon=db.kassenzeichen||"";
+  sichern();
   befund("b-ja","Gültig"+personen(plaetzeVon(t)),
          t.kat+(t.gast?" · "+t.gast:"")+" · "+ev.name);
   zeichneListe(); zeichneZahlen(); wolkeVormerken();
@@ -2088,11 +2199,15 @@ function zusammenfuehren(roh){
       /* Der Einlass ist geschehen; das ist die Tatsache, die zählt. */
       lt.status="eingeloest"; lt.eingeloestAm=ft.eingeloestAm||Date.now();
     } else if(einDort && !einHier){
-      lt.status="eingeloest"; lt.eingeloestAm=ft.eingeloestAm||Date.now(); b.einlaesse++;
+      lt.status="eingeloest"; lt.eingeloestAm=ft.eingeloestAm||Date.now();
+      lt.eingeloestVon=ft.eingeloestVon||"";
+      b.einlaesse++;
     } else if(einHier && einDort){
       /* Zweimal eingelassen heißt: einmal eingelassen, und zwar zuerst dort,
-         wo es früher war. */
-      lt.eingeloestAm=Math.min(lt.eingeloestAm||Infinity, ft.eingeloestAm||Infinity);
+         wo es früher war — das Gerät wandert mit dem früheren Zeitpunkt. */
+      if((ft.eingeloestAm||Infinity) < (lt.eingeloestAm||Infinity)){
+        lt.eingeloestAm=ft.eingeloestAm; lt.eingeloestVon=ft.eingeloestVon||"";
+      }
     } else if(stoDort && !stoHier){
       lt.status="storniert"; b.stornos++;
     }
@@ -2345,6 +2460,128 @@ function wolkeUhrStellen(){
   wolkeUhr=setInterval(function(){ wolkeAbgleichen(); }, minuten*60000);
 }
 
+/* ========================== Kassenabschluss ==========================
+
+   Am Ende des Abends: was wurde verkauft, was ist hereingekommen, und wo
+   klafft eine Lücke. Gerechnet wird über alles, was an dieser
+   Veranstaltung hängt — nach dem Abgleich also über alle Geräte.
+
+   Geschlossen wird nur der Verkauf. Eingelassen wird weiter: es kommt
+   vor, dass die Kasse schon abgerechnet ist, während die letzten Gäste
+   noch eintrudeln. */
+
+function geraeteName(zeichen){
+  return zeichen ? "Gerät "+zeichen : "ohne Zeichen";
+}
+
+function abschlussDaten(ev){
+  if(!ev) return null;
+  var liste=db.tickets.filter(function(t){ return t.evId===ev.id; });
+
+  var nach={}, gerAete={}, summe={verkauft:0, eingeloest:0, storniert:0,
+                                 nachgetragen:0, cent:0};
+
+  liste.forEach(function(t){
+    var p=plaetzeVon(t);
+
+    if(t.status==="storniert"){ summe.storniert+=p; }
+
+    if(t.nachgetragen){
+      summe.nachgetragen+=p;
+      if(t.status==="eingeloest"){ summe.eingeloest+=p; }
+    } else if(t.status!=="storniert"){
+      var k=t.kat||"ohne Kategorie";
+      if(!nach[k]) nach[k]={verkauft:0, eingeloest:0, cent:0};
+      nach[k].verkauft+=p; nach[k].cent+=(t.cent||0);
+      summe.verkauft+=p; summe.cent+=(t.cent||0);
+      if(t.status==="eingeloest"){ nach[k].eingeloest+=p; summe.eingeloest+=p; }
+    }
+
+    if(t.status==="eingeloest"){
+      var g=t.eingeloestVon||"";
+      if(!gerAete[g]) gerAete[g]={plaetze:0, karten:0, nachgetragen:0};
+      gerAete[g].plaetze+=p; gerAete[g].karten++;
+      if(t.nachgetragen) gerAete[g].nachgetragen+=p;
+    }
+  });
+
+  return { ev:ev, zeit:db.geschlossen[ev.id]||null,
+           nach:nach, geraete:gerAete, summe:summe };
+}
+
+function zeichneAbschluss(){
+  var ev=aktivesEvent(), kasten=$("abschluss");
+  var knopf=$("btnSchliessen");
+  if(!ev){ kasten.innerHTML='<div class="muted">Keine Veranstaltung aktiv.</div>';
+           knopf.disabled=true; return; }
+  knopf.disabled=false;
+
+  var zu=!!db.geschlossen[ev.id];
+  knopf.textContent = zu ? "Kasse wieder öffnen" : "Kasse schließen";
+  knopf.className = zu ? "knopf" : "knopf voll";
+
+  var d=abschlussDaten(ev);
+  var namen=Object.keys(d.nach).sort();
+  var geraete=Object.keys(d.geraete).sort();
+
+  var h="";
+  h+='<div class="'+(zu?"hinweis":"muted")+'" style="margin:0 0 14px'+
+     (zu?';background:var(--wattHell);border-color:var(--watt);color:var(--watt)':'')+'">'+
+     (zu ? "Kasse geschlossen am "+zeitpunkt(d.zeit)+". Verkauft wird nicht mehr; "+
+           "eingelassen weiterhin."
+         : "Die Kasse ist offen. Nach dem Fest hier schließen — der Verkauf endet "+
+           "damit, der Einlass läuft weiter.")+
+     '</div>';
+
+  h+='<table><tr><th>Kategorie</th><th class="n">verkauft</th>'+
+     '<th class="n">eingelöst</th><th class="n">offen</th><th class="n">Euro</th></tr>';
+  if(!namen.length){
+    h+='<tr><td class="muted" colspan="5">Noch nichts verkauft.</td></tr>';
+  }
+  namen.forEach(function(k){
+    var z=d.nach[k];
+    h+='<tr><td>'+esc(k)+'</td>'+
+       '<td class="n">'+z.verkauft+'</td>'+
+       '<td class="n">'+z.eingeloest+'</td>'+
+       '<td class="n'+((z.verkauft-z.eingeloest)?'':' muted')+'">'+(z.verkauft-z.eingeloest)+'</td>'+
+       '<td class="n mono">'+eur(z.cent)+'</td></tr>';
+  });
+  h+='<tr><td><b>Zusammen</b></td>'+
+     '<td class="n"><b>'+d.summe.verkauft+'</b></td>'+
+     '<td class="n"><b>'+(d.summe.eingeloest-d.summe.nachgetragen)+'</b></td>'+
+     '<td class="n"><b>'+(d.summe.verkauft-(d.summe.eingeloest-d.summe.nachgetragen))+'</b></td>'+
+     '<td class="n mono"><b>'+eur(d.summe.cent)+'</b></td></tr>';
+  if(d.summe.nachgetragen){
+    h+='<tr><td class="muted">nachgetragen, anderswo verkauft</td>'+
+       '<td class="n muted">—</td><td class="n">'+d.summe.nachgetragen+'</td>'+
+       '<td class="n muted">—</td><td class="n muted">—</td></tr>';
+  }
+  if(d.summe.storniert){
+    h+='<tr><td class="muted">storniert</td><td class="n">'+d.summe.storniert+'</td>'+
+       '<td class="n muted">—</td><td class="n muted">—</td><td class="n muted">—</td></tr>';
+  }
+  h+='</table>';
+
+  h+='<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;'+
+     'color:var(--tinteWeich);margin:20px 0 8px">Einlass nach Gerät</h2>';
+  if(!geraete.length){
+    h+='<div class="muted">Noch niemand eingelassen.</div>';
+  }else{
+    h+='<table><tr><th>Gerät</th><th class="n">Plätze</th><th class="n">Karten</th>'+
+       '<th class="n">davon nachgetragen</th></tr>';
+    geraete.forEach(function(g){
+      var z=d.geraete[g];
+      h+='<tr><td>'+esc(geraeteName(g))+'</td>'+
+         '<td class="n">'+z.plaetze+'</td>'+
+         '<td class="n">'+z.karten+'</td>'+
+         '<td class="n'+(z.nachgetragen?'':' muted')+'">'+z.nachgetragen+'</td></tr>';
+    });
+    h+='</table>';
+  }
+
+  kasten.innerHTML=h;
+}
+
 /* =========================== Einstellungen =========================== */
 function zeichneEvents(){
   var s=$("evSel");
@@ -2468,7 +2705,7 @@ function allesZeichnen(){
   if($("schluessel")) $("schluessel").value=db.schluessel;
   zeichneEvents(); zeichneKats(); zeichneKacheln(); zeichneBuchung();
   zeichneLayoutWahl(); zeichneSammelWahl(); zeichneNachtragen(); zeichneTonWahl(); zeichneWolke();
-  zeichneListe(); zeichneZahlen();
+  zeichneListe(); zeichneZahlen(); zeichneAbschluss();
 }
 
 /* ============================ Verdrahtung ============================ */
@@ -2481,7 +2718,7 @@ function reiterZeigen(name){
   });
   if(name!=="einlass") kameraAus();
   if(name==="einlass") $("scanFeld").focus();
-  if(name==="tickets"){ zeichneListe(); zeichneZahlen(); }
+  if(name==="tickets"){ zeichneListe(); zeichneZahlen(); zeichneAbschluss(); }
 }
 
 function start(){
@@ -2561,6 +2798,27 @@ function start(){
     karte.status="storniert";
     sichern(); zeichneListe(); zeichneZahlen(); wolkeVormerken(); melden("Karte storniert");
   });
+  $("btnSchliessen").addEventListener("click",function(){
+    var ev=aktivesEvent(); if(!ev) return;
+    if(db.geschlossen[ev.id]){
+      if(!confirm("Kasse für „"+ev.name+"“ wieder öffnen? Danach kann weiter "+
+                  "verkauft werden.")) return;
+      delete db.geschlossen[ev.id];
+      melden("Kasse wieder offen");
+    }else{
+      var d=abschlussDaten(ev);
+      if(!confirm("Kasse für „"+ev.name+"“ schließen?\n\n"+
+                  d.summe.verkauft+" Plätze verkauft, "+eur(d.summe.cent)+" €\n"+
+                  "Danach wird nicht mehr verkauft; eingelassen wird weiter."))
+        return;
+      db.geschlossen[ev.id]=Date.now();
+      melden("Kasse geschlossen");
+    }
+    sichern(); wolkeVormerken(); allesZeichnen();
+  });
+
+  $("btnAbschlussDrucken").addEventListener("click",abschlussDrucken);
+
   $("btnNachdruck").addEventListener("click",function(){
     var ev=aktivesEvent();
     if(!ev){ melden("Keine Veranstaltung aktiv"); return; }
