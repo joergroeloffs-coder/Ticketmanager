@@ -136,11 +136,26 @@ Die nachgetragenen Karten stehen in der Übersicht für sich. Sie zählen nicht
 zu den Einnahmen dieses Geräts, denn ihr Preis steht nicht im Code — er
 liegt beim Gerät, das sie verkauft hat.
 
-## Kassenabschluss
+## Höchstzahlen
 
-Unter *Tickets* steht oben der **Kassenabschluss**: je Kategorie, wie viele
-Plätze verkauft, wie viele eingelöst wurden und wie viele offen blieben, dazu
-die Einnahmen. Darunter, wer eingelassen hat — je Gerät.
+Zweihundert Sitzplätze, dreiundsechzig Essen: unter *Einstellungen →
+Kategorien* trägt jede Kategorie eine **Höchstzahl**. Die Kasse zeigt den
+Rest auf der Kachel — *noch 137 von 200* — und lässt nicht darüber hinaus;
+die Kachel wird blass und meldet sich, wenn jemand es trotzdem versucht.
+
+Gezählt wird je Veranstaltung. Was im Korb liegt, zählt mit: sonst ließe sich
+die Grenze innerhalb einer Buchung überschreiten und es fiele erst beim
+Drucken auf. Eine stornierte Karte gibt ihren Platz wieder frei. Leer heißt:
+keine Grenze.
+
+Die Höchstzahl lässt sich jederzeit ändern — wird das Fest voller als
+gedacht, kostet das zwei Handgriffe.
+
+## Übersicht und Abschluss
+
+Unter *Tickets* steht die **Übersicht**: je Kategorie verkauft, eingelöst,
+offen, verfügbar und die Einnahmen — auch für Kategorien, von denen noch
+nichts verkauft ist. Darunter, wer eingelassen hat, je Gerät.
 
 **Kasse schließen** beendet den Verkauf für diese Veranstaltung. Der Einlass
 läuft weiter; es kommt vor, dass abgerechnet wird, während die letzten Gäste
@@ -297,7 +312,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **2.0** | Kassenabschluss zum Drucken, Einlass je Gerät ausgewiesen |
+| **2.1** | Höchstzahlen je Kategorie, eine Übersicht statt dreier |
+| 2.0 | Kassenabschluss zum Drucken, Einlass je Gerät ausgewiesen |
 | 1.9 | Verbindung prüfen: sagt, warum ein Abgleich klemmt |
 | 1.8 | Zugang zur Ablage per QR-Code auf das zweite Gerät |
 | 1.7 | ein leeres Gerät richtet sich aus der Ablage selbst ein |
