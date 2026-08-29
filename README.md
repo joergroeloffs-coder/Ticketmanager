@@ -187,7 +187,17 @@ wie oft abgeglichen werden soll.
 ### Ein zweites Gerät einrichten
 
 Auf dem neuen Gerät nur die Adresse und das Zugangswort eintragen und
-einmal *Jetzt abgleichen* drücken. Alles Übrige kommt von selbst:
+einmal *Jetzt abgleichen* drücken.
+
+Beides abzutippen ist auf einem Handy eine Zumutung — die Adresse allein hat
+rund hundertfünfzig Zeichen. Deshalb geht es auch so: auf dem eingerichteten
+Gerät *Einstellungen → Ablage → **Zugang als QR-Code zeigen***, auf dem neuen
+*Einlass → Kamera* und den Code vom Bildschirm des anderen abfotografieren.
+Die Kasse fragt nach, trägt Adresse und Zugangswort ein und gleicht sofort ab.
+
+In diesem Bild steckt das Zugangswort im Klartext. Es gehört auf den
+Bildschirm des eigenen Geräts und nicht in eine Mail, einen Ausdruck oder ein
+Foto. Alles Übrige kommt von selbst:
 Veranstaltungen, Kategorien samt Farben, verkaufte Karten — und der
 Schlüssel.
 
@@ -236,7 +246,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **1.7** | ein leeres Gerät richtet sich aus der Ablage selbst ein |
+| **1.8** | Zugang zur Ablage per QR-Code auf das zweite Gerät |
+| 1.7 | ein leeres Gerät richtet sich aus der Ablage selbst ein |
 | 1.6 | Hausfarben auf den Kacheln, Veranstaltungen änderbar, Ton am Einlass |
 | 1.5 | farbige Kacheln, Kategorien änderbar, Sammelkarten, Etikettendruck |
 | 1.4 | Ablage im Drive: die Geräte gleichen sich selbst ab |

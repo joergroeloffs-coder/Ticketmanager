@@ -633,6 +633,13 @@ td.n,th.n{text-align:right}
         <button class="knopf voll" id="btnWolkeJetzt">Jetzt abgleichen</button>
       </div>
       <div id="wolkeStand" class="muted" style="margin-top:10px">Keine Ablage eingetragen.</div>
+      <div class="reihe" style="margin-top:12px">
+        <button class="knopf klein" id="btnZugangZeigen">Zugang als QR-Code zeigen</button>
+        <span class="muted grow">Damit richtet sich ein zweites Gerät ein, ohne die
+          lange Adresse abzutippen: dort <i>Einlass → Kamera</i> und diesen Code
+          zeigen.</span>
+      </div>
+      <div id="zugangBild" class="hide" style="margin-top:12px"></div>
     </div>
   </div>
 
@@ -704,7 +711,7 @@ td.n,th.n{text-align:right}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "1.7";
+var VERSION = "1.8";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
@@ -1631,7 +1638,45 @@ window.addEventListener("afterprint",function(){ $("bogen").innerHTML=""; });
 /* ============================== Einlass ============================== */
 var pruefungen=[];
 
+/* Der Zugang zur Ablage besteht aus einer langen Adresse und einem
+   Zugangswort — auf einem Handy abzutippen ist das eine Zumutung. Die Kasse
+   kann beides als QR-Code zeigen und wieder einlesen; sie zeichnet und liest
+   ohnehin welche.
+
+   Erkannt wird die Übergabe, bevor der Code in Großbuchstaben gewandelt
+   wird: eine Adresse verträgt das nicht. */
+var ZUGANGSMARKE="TICKETKASSE-ZUGANG-1";
+
+function zugangText(){
+  return ZUGANGSMARKE+"\n"+(db.ablage.adresse||"")+"\n"+(db.ablage.wort||"");
+}
+
+function zugangLesen(roh){
+  var zeilen=String(roh||"").split(/\r?\n/);
+  if(zeilen[0].trim()!==ZUGANGSMARKE) return false;
+  var adresse=(zeilen[1]||"").trim(), wort=(zeilen[2]||"").trim();
+  if(!adresse) return false;
+  var feld=$("befund");
+  if(!confirm("Zugang zur Ablage von einem anderen Gerät übernehmen?\n\n"+
+              adresse+"\n\nDie eigenen Angaben werden dabei ersetzt.")){
+    feld.className="befund b-still";
+    feld.textContent="Zugang nicht übernommen.";
+    return true;
+  }
+  db.ablage={adresse:adresse, wort:wort, intervall:db.ablage.intervall||1};
+  sichern(); wolkeUhrStellen();
+  $("wolkeAdresse").value=adresse; $("wolkeWort").value=wort;
+  zeichneWolke();
+  feld.className="befund b-ja";
+  feld.innerHTML="Zugang übernommen"+
+    '<div class="dazu">Die Ablage ist eingetragen. Der Abgleich läuft gleich an.</div>';
+  klingen(true);
+  wolkeAbgleichen();
+  return true;
+}
+
 function pruefe(roh){
+  if(zugangLesen(roh)) return;
   var code=String(roh||"").trim().toUpperCase();
   var feld=$("befund");
   function befund(art,titel,dazu){
@@ -2642,6 +2687,30 @@ function start(){
     melden(a ? "Ablage gespeichert" : "Ablage entfernt");
   });
   $("btnWolkeJetzt").addEventListener("click",function(){ wolkeAbgleichen(); });
+
+  $("btnZugangZeigen").addEventListener("click",function(){
+    var kasten=$("zugangBild");
+    if(!kasten.classList.contains("hide")){ kasten.classList.add("hide"); return; }
+    if(!wolkeBereit()){ melden("Erst Adresse und Zugangswort eintragen"); return; }
+    var bild;
+    try{
+      bild='<div style="width:240px;max-width:100%">'+qrSvg(zugangText())+'</div>';
+    }catch(e){
+      /* Der Kodierer reicht bis rund zweihundert Zeichen. Eine gewöhnliche
+         Apps-Script-Adresse braucht etwa hundertfünfzig, es bleibt also Luft
+         — aber nicht beliebig viel. */
+      bild='<div class="hinweis">Adresse und Zugangswort sind zusammen zu lang für '+
+           'einen QR-Code ('+zugangText().length+' Zeichen, mehr als rund 200 gehen '+
+           'nicht). Ein kürzeres Zugangswort schafft Platz; sonst bleibt das '+
+           'Abtippen.</div>';
+    }
+    kasten.innerHTML=
+      '<div class="hinweis" style="background:var(--messingHell);'+
+      'border-color:var(--messingRand);color:var(--messing);margin:0 0 10px">'+
+      'In diesem Bild steckt auch das Zugangswort. Nur den eigenen Geräten zeigen, '+
+      'nicht abfotografieren lassen und nicht ausdrucken.</div>'+bild;
+    kasten.classList.remove("hide");
+  });
   $("wolkeIntervall").addEventListener("change",function(){
     db.ablage.intervall=Number(this.value)||0; sichern(); wolkeUhrStellen();
   });
