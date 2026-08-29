@@ -195,6 +195,23 @@ Gerät *Einstellungen → Ablage → **Zugang als QR-Code zeigen***, auf dem neu
 *Einlass → Kamera* und den Code vom Bildschirm des anderen abfotografieren.
 Die Kasse fragt nach, trägt Adresse und Zugangswort ein und gleicht sofort ab.
 
+### Wenn der Abgleich klemmt
+
+*Einstellungen → Ablage → **Verbindung prüfen*** fragt die Ablage einmal und
+zeigt, was zurückkommt — Status, Typ und der Anfang der Antwort. Die
+häufigsten Fälle nennt die Kasse beim Namen:
+
+| was zurückkommt | was zu tun ist |
+| --- | --- |
+| eine **Anmeldeseite** | Bei *Bereitstellen → Bereitstellungen verwalten* muss „Wer hat Zugriff" auf **Jeder** stehen — nicht auf „Jeder mit einem Google-Konto" |
+| eine **Internetseite** statt Daten | Die Adresse gehört zu keiner bereitgestellten Web-App, oder sie endet nicht auf `/exec` |
+| **nicht erreichbar** | Kein Netz, oder die Adresse stimmt nicht |
+| **Zugangswort stimmt nicht** | Im Skript steht ein anderes — oder die Änderung wurde nie als neue Version bereitgestellt |
+
+Der letzte Fall ist der häufigste nach einer Änderung am Skript: *Speichern*
+allein reicht nicht. Es braucht *Bereitstellen → Bereitstellungen verwalten →
+Stift → Version: Neue Version → Bereitstellen*. Sonst läuft weiter die alte.
+
 In diesem Bild steckt das Zugangswort im Klartext. Es gehört auf den
 Bildschirm des eigenen Geräts und nicht in eine Mail, einen Ausdruck oder ein
 Foto. Alles Übrige kommt von selbst:
@@ -246,7 +263,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **1.8** | Zugang zur Ablage per QR-Code auf das zweite Gerät |
+| **1.9** | Verbindung prüfen: sagt, warum ein Abgleich klemmt |
+| 1.8 | Zugang zur Ablage per QR-Code auf das zweite Gerät |
 | 1.7 | ein leeres Gerät richtet sich aus der Ablage selbst ein |
 | 1.6 | Hausfarben auf den Kacheln, Veranstaltungen änderbar, Ton am Einlass |
 | 1.5 | farbige Kacheln, Kategorien änderbar, Sammelkarten, Etikettendruck |
