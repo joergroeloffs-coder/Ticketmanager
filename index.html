@@ -16,6 +16,10 @@
 <meta name="apple-mobile-web-app-title" content="Ticketkasse">
 <meta name="apple-mobile-web-app-capable" content="yes">
 
+<!-- Bleibt leer, solange auf A4 gedruckt wird; vor einem Druck auf die Rolle
+     schreibt die Kasse hier das Maß des Etiketts hinein. -->
+<style id="seitenmass"></style>
+
 <!--
   Ticketkasse — Abendkasse für Veranstaltungen des Vereins.
 
@@ -326,6 +330,19 @@ td.n,th.n{text-align:right}
 .bericht .fuss{margin-top:10mm;font-size:8pt;color:#444;
   border-top:0.6pt solid #000;padding-top:2mm}
 
+/* ---- Etikettendrucker: ein Schildchen je Seite ---- */
+.bogen.rolle{padding:0}
+.rollenschild{
+  position:static;box-sizing:border-box;width:100%;
+  height:var(--etiketthoehe,auto);min-height:0;
+  break-after:page;page-break-after:always;
+  display:flex;gap:2mm;align-items:center;overflow:hidden;
+}
+.rollenschild:last-child{break-after:auto;page-break-after:auto}
+.rollenschild .kategorie{font-size:11pt}
+.rollenschild .code{font-size:5.5pt}
+.rollenschild.probe{border:0.4pt dashed #000;justify-content:center}
+
 /* ---- Etikettenbogen ---- */
 .bogen.etikett{padding:0}
 .etikettseite{
@@ -429,6 +446,7 @@ td.n,th.n{text-align:right}
           <button type="button" data-layout="mehrfach">Mehrere pro Seite</button>
           <button type="button" data-layout="einzeln">Eine pro Seite</button>
           <button type="button" data-layout="etikett">Etikettenbogen</button>
+          <button type="button" data-layout="rolle">Etikettendrucker</button>
         </div>
       </div>
 
@@ -645,6 +663,26 @@ td.n,th.n{text-align:right}
         <button class="knopf voll" id="btnEtProbe">Ausrichtung drucken</button>
       </div>
       <div id="etStand" class="muted" style="margin-top:10px"></div>
+
+      <div class="feldTitel" style="margin-top:20px">Etiketten- oder Thermodrucker</div>
+      <p class="muted" style="margin:0 0 10px">
+        Für Geräte, die einzelne Schildchen oder eine endlose Bahn ziehen statt
+        A4-Bögen — Brother, Dymo, Zebra, Bondrucker. Ein Ticket je Etikett.
+        Höhe leer lassen heißt fortlaufend: dann bestimmt der Inhalt, wie weit
+        das Papier vorgeschoben wird.
+      </p>
+      <div class="reihe" style="flex-wrap:wrap">
+        <label class="feld" style="width:110px"><span>Breite mm</span>
+          <input id="roBreite" inputmode="decimal"></label>
+        <label class="feld" style="width:110px"><span>Höhe mm</span>
+          <input id="roHoehe" inputmode="decimal" placeholder="fortlaufend"></label>
+        <label class="feld" style="width:110px"><span>Rand mm</span>
+          <input id="roRand" inputmode="decimal"></label>
+      </div>
+      <div class="reihe" style="margin-top:12px">
+        <button class="knopf" id="btnRoSpeichern">Maße speichern</button>
+        <button class="knopf" id="btnRoProbe">Probeetikett drucken</button>
+      </div>
       <div class="hinweis" style="margin-top:10px;background:var(--messingHell);
            border-color:var(--messingRand);color:var(--messing)">
         Im Druckdialog muss <b>Tatsächliche Größe</b> oder <b>100 %</b> eingestellt
@@ -766,7 +804,7 @@ td.n,th.n{text-align:right}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "2.2";
+var VERSION = "2.3";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
@@ -1076,6 +1114,10 @@ function leereDaten(){
        auf eine andere Packung umstellen lässt, ohne etwas umzubauen. */
     etikett:{breite:70, hoehe:37, spalten:3, zeilen:8,
              randLinks:0, randOben:0.5, abstandX:0, abstandY:0},
+    /* Etiketten- und Thermodrucker kennen kein A4: sie ziehen ein Etikett
+       oder eine endlose Bahn. Höhe null heißt fortlaufend — dann bestimmt
+       der Inhalt, wie weit das Papier vorgeschoben wird. */
+    rolle:{breite:62, hoehe:29, rand:2},
     ablage:{adresse:"", wort:"", intervall:0},
   };
 }
@@ -1113,7 +1155,14 @@ function migriere(d){
   else if(typeof d.secret==="string"&&d.secret) neu.schluessel=d.secret;
   neu.aktiv = d.aktiv || d.activeEvent || null;
   neu.layout = (d.layout==="einzeln"||d.layout==="single") ? "einzeln"
-             : (d.layout==="etikett") ? "etikett" : "mehrfach";
+             : (d.layout==="etikett") ? "etikett"
+             : (d.layout==="rolle") ? "rolle" : "mehrfach";
+  if(d.rolle&&typeof d.rolle==="object"){
+    ["breite","hoehe","rand"].forEach(function(f){
+      var w=Number(d.rolle[f]);
+      if(Number.isFinite(w)&&w>=0) neu.rolle[f]=w;
+    });
+  }
   neu.nachtragen = (d.nachtragen!==false);
   neu.sammelkarte = !!d.sammelkarte;
   neu.ton = (d.ton!==false);
@@ -1695,6 +1744,7 @@ function etikettenBogen(liste, nurRaster){
    im Kopf. */
 function abschlussDrucken(){
   var ev=aktivesEvent(); if(!ev){ melden("Keine Veranstaltung aktiv"); return; }
+  seitenmass("");
   var d=abschlussDaten(ev), v=db.veranstalter||{};
   var namen=db.kats.map(function(k){return k.name;});
   Object.keys(d.nach).forEach(function(k){ if(namen.indexOf(k)<0) namen.push(k); });
@@ -1757,13 +1807,71 @@ function abschlussDrucken(){
 
 function ausrichtungDrucken(){
   var bogen=$("bogen");
+  seitenmass("");
   bogen.className="bogen etikett";
   bogen.innerHTML=etikettenBogen([], true);
   setTimeout(function(){ window.print(); },80);
 }
 
+/* Ein einzelnes Etikett mit Rahmen, zum Ausmessen: passt das Maß, sitzt der
+   Rahmen genau auf der Kante des Schildchens. */
+function rollenProbeDrucken(){
+  var r=db.rolle;
+  seitenmass("@page{size:"+r.breite+"mm "+(r.hoehe? r.hoehe+"mm" : "auto")+";margin:0}");
+  var bogen=$("bogen");
+  bogen.className="bogen rolle";
+  bogen.style.setProperty("--etiketthoehe", r.hoehe? r.hoehe+"mm" : "auto");
+  bogen.innerHTML='<div class="etikett rollenschild probe" style="padding:'+r.rand+'mm">'+
+    '<div class="daten" style="text-align:center">'+
+      '<div class="kategorie">'+r.breite+' × '+(r.hoehe||"fortlaufend")+' mm</div>'+
+      '<div class="preis">Rand '+r.rand+' mm</div>'+
+    '</div></div>';
+  setTimeout(function(){ window.print(); },80);
+}
+
+/* Das Seitenmaß steht nicht im Stylesheet, sondern wird vor jedem Druck
+   gesetzt: bei A4 leer — dann gilt die Regel aus dem Stylesheet —, beim
+   Etikettendrucker das Maß der Rolle. Anders ließe sich ein Programm nicht
+   auf verschiedene Drucker richten, ohne für jeden eine eigene Fassung zu
+   halten. */
+function seitenmass(regel){
+  var stil=$("seitenmass");
+  stil.textContent = regel || "";
+}
+
+function rollenBogen(liste){
+  var r=db.rolle, v=db.veranstalter||{};
+  var qr=Math.max(8, (r.hoehe? r.hoehe : 40) - 2*r.rand - 1);
+  return liste.map(function(t){
+    var ev=null;
+    for(var k=0;k<db.events.length;k++) if(db.events[k].id===t.evId) ev=db.events[k];
+    return '<div class="etikett rollenschild" style="padding:'+r.rand+'mm">'+
+      '<div class="qr" style="width:'+qr+'mm;height:'+qr+'mm">'+qrSvg(ticketCode(t))+'</div>'+
+      '<div class="daten">'+
+        '<div class="anlass">'+esc(ev?ev.name:t.kuerzel)+'</div>'+
+        '<div class="kategorie">'+esc(t.kat)+'</div>'+
+        (plaetzeVon(t)>1?'<div class="plaetze">für '+plaetzeVon(t)+' Personen</div>':'')+
+        '<div class="preis">'+eur(t.cent)+' &euro;</div>'+
+        '<div class="code">'+esc(ticketCode(t))+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join("");
+}
+
 function drucken(liste){
   var bogen=$("bogen");
+
+  if(db.layout==="rolle"){
+    var r=db.rolle;
+    seitenmass("@page{size:"+r.breite+"mm "+(r.hoehe? r.hoehe+"mm" : "auto")+
+               ";margin:0}");
+    bogen.className="bogen rolle";
+    bogen.style.setProperty("--etiketthoehe", r.hoehe? r.hoehe+"mm" : "auto");
+    bogen.innerHTML=rollenBogen(liste);
+    setTimeout(function(){ window.print(); },80);
+    return;
+  }
+  seitenmass("");
   if(db.layout==="etikett"){
     bogen.className="bogen etikett";
     bogen.innerHTML=etikettenBogen(liste, false);
@@ -3075,6 +3183,33 @@ function start(){
   });
 
   $("btnEtProbe").addEventListener("click",ausrichtungDrucken);
+
+  var roFelder={breite:"roBreite", hoehe:"roHoehe", rand:"roRand"};
+  function rolleZeigen(){
+    $("roBreite").value=String(db.rolle.breite).replace(".",",");
+    $("roHoehe").value = db.rolle.hoehe ? String(db.rolle.hoehe).replace(".",",") : "";
+    $("roRand").value  = String(db.rolle.rand).replace(".",",");
+  }
+  rolleZeigen();
+
+  $("btnRoSpeichern").addEventListener("click",function(){
+    function zahl(id,leerErlaubt){
+      var roh=String($(id).value).trim();
+      if(roh==="" && leerErlaubt) return 0;
+      var w=Number(roh.replace(",","."));
+      return (Number.isFinite(w)&&w>=0) ? w : NaN;
+    }
+    var b=zahl("roBreite"), h=zahl("roHoehe",true), rd=zahl("roRand");
+    if(!Number.isFinite(b)||b<=0||!Number.isFinite(h)||!Number.isFinite(rd)){
+      alert("Breite und Rand sind Zahlen, die Breite größer null. Die Höhe darf "+
+            "leer bleiben — dann wird fortlaufend gedruckt.");
+      return;
+    }
+    if(h && rd*2>=h){ alert("Der Rand ist so groß, dass für den Inhalt nichts bleibt."); return; }
+    db.rolle={breite:b, hoehe:h, rand:rd}; sichern(); rolleZeigen();
+    melden("Maße gespeichert");
+  });
+  $("btnRoProbe").addEventListener("click",rollenProbeDrucken);
 
   /* ---- Ablage ---- */
   $("btnWolkeSpeichern").addEventListener("click",function(){
