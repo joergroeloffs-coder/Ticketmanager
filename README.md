@@ -172,6 +172,24 @@ Die Einrichtung steht oben in `ablage.gs`. Danach kommen Adresse und
 Zugangswort in der Ticketkasse unter *Einstellungen → Ablage* hinein, dazu
 wie oft abgeglichen werden soll.
 
+### Ein zweites Gerät einrichten
+
+Auf dem neuen Gerät nur die Adresse und das Zugangswort eintragen und
+einmal *Jetzt abgleichen* drücken. Alles Übrige kommt von selbst:
+Veranstaltungen, Kategorien samt Farben, verkaufte Karten — und der
+Schlüssel.
+
+Dass der Schlüssel mitkommt, gilt nur für ein **leeres** Gerät, auf dem
+noch keine Veranstaltung, keine Kategorie und keine Karte steht. Dort ist
+nichts zu verlieren, und wer Adresse und Zugangswort hat, gehört ohnehin
+dazu. Hat das Gerät schon einen eigenen Stand, wird der Abgleich abgelehnt:
+zwei verschiedene Schlüssel im selben Haus bedeuten, dass die Karten des
+einen beim anderen als gefälscht gelten. Dann entweder von Hand denselben
+Schlüssel eintragen oder das Gerät unter *Zurücksetzen* leeren.
+
+Das **Kassenzeichen** kommt ausdrücklich nicht mit — es ist die Kennung
+dieses einen Geräts. Es wird gar nicht erst in die Ablage geschrieben.
+
 Der Ablauf ist immer derselbe:
 
     holen  →  zusammenführen  →  zurücklegen
@@ -206,7 +224,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **1.6** | Hausfarben auf den Kacheln, Veranstaltungen änderbar, Ton am Einlass |
+| **1.7** | ein leeres Gerät richtet sich aus der Ablage selbst ein |
+| 1.6 | Hausfarben auf den Kacheln, Veranstaltungen änderbar, Ton am Einlass |
 | 1.5 | farbige Kacheln, Kategorien änderbar, Sammelkarten, Etikettendruck |
 | 1.4 | Ablage im Drive: die Geräte gleichen sich selbst ab |
 | 1.3 | Zusammenführen zweier Stände von Hand, über eine Sicherung |
