@@ -959,7 +959,13 @@ function laden(){
   if(roh){ try{ db=migriere(JSON.parse(roh)); }catch(e){ db=leereDaten(); } }
   else db=leereDaten();
 }
+/* Jede Änderung zählt einen Schritt weiter. Der Abgleich merkt sich, bei
+   welchem Stand er zuletzt abgelegt hat, und spart sich das Ablegen, wenn
+   seither nichts geschehen ist. */
+var standZaehler=0;
+
 function sichern(){
+  standZaehler++;
   try{ localStorage.setItem(KEY,JSON.stringify(db)); }
   catch(e){ nurImSpeicher=true; speicherWarnung(); }
 }
@@ -1659,8 +1665,13 @@ function zusammenfuehren(roh){
    länger, bis beide Geräte dasselbe wissen. */
 
 var wolkeLaeuft=false, wolkeUhr=null, wolkeMerker=null, wolkeStandText="";
+var hochgeladenBei=-1;
 
 function wolkeBereit(){ return !!(db.ablage && db.ablage.adresse); }
+
+function etwasGebracht(b){
+  return !!(b && (b.ticketsNeu||b.einlaesse||b.geklaert||b.stornos||b.eventsNeu||b.katsNeu));
+}
 
 function zeichneWolke(){
   var an=wolkeBereit();
@@ -1712,11 +1723,26 @@ function wolkeAbgleichen(versuch){
       if(a.daten){
         bericht=zusammenfuehren(a.daten);
         if(bericht.fehler) throw new Error(bericht.fehler);
+        /* Nur speichern, wenn der Abgleich wirklich etwas gebracht hat —
+           sonst zählte allein das Nachsehen schon als Änderung und die
+           Kasse legte gleich darauf wieder ab. */
+        if(etwasGebracht(bericht)) sichern();
       }
-      sichern();
+
+      /* Ein Gerät, das nur danebensteht, muss nichts schreiben. Google
+         begrenzt, wie lange ein Skript am Tag laufen darf; das jede Minute
+         für denselben Stand aufzubrauchen wäre Verschwendung. */
+      if(standZaehler===hochgeladenBei){
+        return {ablegen:{ok:true, unveraendert:true}, bericht:bericht};
+      }
+
+      var beimSenden=standZaehler;
       return wolkeRufen({aktion:"legen", wort:db.ablage.wort, basis:a.stand,
                          daten:wolkePaket(), geraet:db.kassenzeichen||"ohne Zeichen"})
-        .then(function(b){ return {ablegen:b, bericht:bericht}; });
+        .then(function(b){
+          if(b && b.ok) hochgeladenBei=beimSenden;
+          return {ablegen:b, bericht:bericht};
+        });
     })
     .then(function(e){
       if(e.ablegen.fehler==="veraltet"){
@@ -1737,7 +1763,8 @@ function wolkeAbgleichen(versuch){
                  mehrzahl(b.stornos,"Storno","Stornos")]
               .filter(Boolean).join(", ")+" übernommen"
         : "";
-      wolkeSagen("Abgeglichen "+uhrzeit(Date.now())+" Uhr"+dazu);
+      wolkeSagen("Abgeglichen "+uhrzeit(Date.now())+" Uhr"+dazu+
+                 (e.ablegen.unveraendert && !dazu ? " · nichts Neues" : ""));
       if(b && b.widersprueche && b.widersprueche.length) zeichneBericht(b);
       return true;
     })

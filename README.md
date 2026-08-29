@@ -117,6 +117,11 @@ neuen Stand mit; dann wird noch einmal gerechnet. Ohne diesen Schritt ginge
 verloren, was das andere Gerät in der Zwischenzeit getan hat — der Fehler,
 den eine schlichte Sicherung im Minutentakt macht.
 
+Geschrieben wird nur, wenn es etwas zu schreiben gibt. Ein Gerät, das
+danebensteht und nichts verkauft, holt bloß und legt nichts ab — Google
+begrenzt, wie lange ein Skript am Tag laufen darf, und das soll nicht für
+immer denselben Stand draufgehen.
+
 Alles bleibt dabei zuerst auf dem Gerät. Fällt das Netz aus, arbeiten Kasse
 und Einlass weiter und gleichen später ab. Es geht nichts verloren; es
 dauert nur länger, bis beide dasselbe wissen. Das Intervall ist deshalb
