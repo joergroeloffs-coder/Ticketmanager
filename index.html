@@ -171,16 +171,19 @@ label.feld>span,.feldTitel{display:block;font-size:11px;text-transform:uppercase
 .kachel:active{transform:translateY(1px)}
 .kachel .bez{font-family:'Newsreader',Georgia,serif;font-size:22px;line-height:1.15;
              padding-right:44px}
-.kachel .preis{font-size:15px;color:rgba(255,255,255,.85)}
+.kachel .preis{font-size:15px;opacity:.82}
 /* Die Zahl steht hell auf dunkel, damit sie sich von der Fläche löst. */
+/* Zahl und Minus setzen sich in Tannengrün ab — auf jeder Kachel dieselbe
+   Gestalt, hell oder dunkel. */
 .kachel .zahl{
   position:absolute;top:10px;right:10px;min-width:34px;height:34px;padding:0 9px;
-  border-radius:17px;background:var(--papier);color:var(--tinte);
+  border-radius:17px;background:var(--watt);color:var(--papier);
   font-size:18px;font-weight:600;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 0 2px rgba(255,255,255,.35);
 }
 .kachel .weniger{
   position:absolute;bottom:10px;right:10px;width:40px;height:40px;border-radius:20px;
-  border:1px solid rgba(255,255,255,.55);background:rgba(0,0,0,.18);color:#fff;
+  border:1px solid currentColor;background:rgba(255,255,255,.22);color:inherit;
   font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;
 }
 
@@ -471,8 +474,10 @@ td.n,th.n{text-align:right}
         <label class="feld"><span>Ort oder Zusatz (freiwillig)</span>
           <input id="evOrt" placeholder="Gemeindehaus Nieblum"></label>
       </div>
+      <div id="evKuerzelSperre" class="muted hide" style="margin-top:6px"></div>
       <div class="reihe" style="margin-top:10px">
         <button class="knopf voll" id="btnEvNeu">Veranstaltung anlegen</button>
+        <button class="knopf hide" id="btnEvAbbrechen">Abbrechen</button>
       </div>
       <div id="evFehler" class="hinweis hide"></div>
     </div>
@@ -516,6 +521,18 @@ td.n,th.n{text-align:right}
         <b>Abweisen</b> lässt nur Karten durch, die hier gespeichert sind —
         das erkennt auch eine stornierte Karte, verlangt aber, dass die Liste
         vorher eingespielt wurde.
+      </p>
+
+      <div class="feldTitel" style="margin-top:16px">Ton beim Prüfen</div>
+      <div class="wahl" id="wahlTon">
+        <button type="button" data-ton="an">Mit Ton</button>
+        <button type="button" data-ton="aus">Still</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">
+        Heller Zweiklang für gültig, tiefes Brummen für abgewiesen — am Eingang
+        hört man es, ohne hinzusehen. Der erste Ton kommt erst, nachdem einmal
+        auf <i>Prüfen</i> oder <i>Kamera</i> getippt wurde; vorher lässt der
+        Browser keinen Klang zu.
       </p>
 
       <div class="feldTitel" style="margin-top:16px">Kassenzeichen</div>
@@ -687,7 +704,7 @@ td.n,th.n{text-align:right}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "1.5";
+var VERSION = "1.6";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
@@ -988,7 +1005,7 @@ function leereDaten(){
     events:[], kats:[], tickets:[], nummern:{},
     veranstalter:{name:"Fering Ferian e.V.", zusatz:"Heimatpflege auf Föhr"},
     schluessel:zufallsSchluessel(), aktiv:null, layout:"mehrfach",
-    nachtragen:true, kassenzeichen:"", sammelkarte:false,
+    nachtragen:true, kassenzeichen:"", sammelkarte:false, ton:true,
     /* Das verbreitetste Herma-Raster: 70 × 37 mm, 24 je Bogen, drei mal
        acht, randlos. Alle Maße in Millimetern und einstellbar, damit sich
        auf eine andere Packung umstellen lässt, ohne etwas umzubauen. */
@@ -1034,6 +1051,7 @@ function migriere(d){
              : (d.layout==="etikett") ? "etikett" : "mehrfach";
   neu.nachtragen = (d.nachtragen!==false);
   neu.sammelkarte = !!d.sammelkarte;
+  neu.ton = (d.ton!==false);
   if(d.etikett&&typeof d.etikett==="object"){
     var e=neu.etikett;
     ["breite","hoehe","spalten","zeilen","randLinks","randOben","abstandX","abstandY"]
@@ -1162,6 +1180,52 @@ function mehrzahl(n,eins,viele){
   return n ? n+" "+(Number(n)===1?eins:viele) : "";
 }
 
+/* ============================ Ton ============================
+
+   Am Eingang schaut niemand auf den Bildschirm — man hält die Karte hin und
+   hört, ob es gepasst hat. Zwei Töne genügen: hell und steigend für gültig,
+   tief und lang für abgewiesen. Wer im Dunkeln steht, unterscheidet sie auch
+   ohne hinzusehen.
+
+   Erzeugt werden sie im Browser, nicht aus Dateien — die Kasse soll eine
+   einzige Datei bleiben. Ein Sinuston mit weichem Ein- und Ausblenden; ohne
+   das knackst es an den Rändern.
+
+   Der Haken: Browser lassen Klang erst zu, nachdem jemand etwas angetippt
+   hat. Deshalb wird der Klangraum beim ersten Tippen auf Kamera oder Prüfen
+   geweckt und danach offengehalten. */
+var klangRaum=null;
+
+function klangWecken(){
+  try{
+    var K=window.AudioContext||window.webkitAudioContext;
+    if(!K) return;
+    if(!klangRaum) klangRaum=new K();
+    if(klangRaum.state==="suspended") klangRaum.resume();
+  }catch(e){}
+}
+
+function ton(hoehe, dauer, verzug, laut){
+  var r=klangRaum, jetzt=r.currentTime+verzug;
+  var welle=r.createOscillator(), regler=r.createGain();
+  welle.type="sine"; welle.frequency.value=hoehe;
+  regler.gain.setValueAtTime(0.0001, jetzt);
+  regler.gain.exponentialRampToValueAtTime(laut, jetzt+0.012);
+  regler.gain.exponentialRampToValueAtTime(0.0001, jetzt+dauer);
+  welle.connect(regler); regler.connect(r.destination);
+  welle.start(jetzt); welle.stop(jetzt+dauer+0.02);
+}
+
+function klingen(gut){
+  if(!db.ton) return;
+  klangWecken();
+  if(!klangRaum) return;
+  try{
+    if(gut){ ton(880,0.11,0,0.25); ton(1318,0.16,0.10,0.25); }  /* a-e, steigend */
+    else   { ton(196,0.42,0,0.30); }                            /* tiefes G */
+  }catch(e){}
+}
+
 /* Bei einer Karte für mehrere steht die Zahl groß in der Antwort: wer an
    der Tür steht, muss auf einen Blick sehen, wie viele hereindürfen. */
 function personen(n){ return n>1 ? " · "+n+" Personen" : ""; }
@@ -1216,8 +1280,46 @@ var korb={};
    sie an der Position in der Liste: ein Verschieben mit dem Pfeil färbte
    alle Kacheln um, und wer sich auf "das grüne Feld" eingestellt hatte,
    griff daneben. */
-var KACHELFARBEN=["#1E5C3E","#80621C","#93382B","#35594A","#A07A2C","#4E6B3A",
-                  "#2F5D63","#6B4A2E"];
+/* Die Töne stammen unverändert aus stammdaten.js — Tannengrün, Messing,
+   Ziegel und ihre hellen Verwandten. Vorher waren es freie Erfindungen in
+   ähnlicher Richtung; jetzt ist es dieselbe Palette wie im Vereinsmanager,
+   und die Kasse sieht neben ihm nicht mehr nach Nachbau aus.
+
+   Helle Töne sind dabei ausdrücklich erwünscht: acht dunkle Kacheln
+   nebeneinander werden zur Wand. Welche Schrift daraufkommt, rechnet die
+   Kasse aus, statt es zu raten. */
+var KACHELFARBEN=[
+  "#1E5C3E",  /* watt        — das edle Grün */
+  "#F7F0DC",  /* messingHell */
+  "#93382B",  /* ziegel      */
+  "#E5EFE8",  /* wattHell    */
+  "#80621C",  /* messing     */
+  "#F7E7E2",  /* ziegelHell  */
+  "#B08D3C",  /* messingRand */
+  "#CDB77E"   /* linie       — das helle Gold */
+];
+
+/* Welche Schrift auf einer Fläche lesbar ist, hängt an ihrer Helligkeit.
+   Gerechnet wird nach der üblichen Gewichtung — Grün trägt am meisten zum
+   Helligkeitseindruck bei, Blau am wenigsten — und dann genommen, was den
+   größeren Abstand hat. Von Hand zugeordnet wäre es einmal richtig und
+   nach der nächsten Farbänderung falsch. */
+function helligkeit(hex){
+  var m=/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex||"");
+  if(!m) return 0;
+  function anteil(h){
+    var c=parseInt(h,16)/255;
+    return c<=0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4);
+  }
+  return 0.2126*anteil(m[1])+0.7152*anteil(m[2])+0.0722*anteil(m[3]);
+}
+function abstand(a,b){
+  var h=helligkeit(a), d=helligkeit(b);
+  return (Math.max(h,d)+0.05)/(Math.min(h,d)+0.05);
+}
+function schriftAuf(hex){
+  return abstand(hex,"#10251A") >= abstand(hex,"#ffffff") ? "#10251A" : "#ffffff";
+}
 
 function naechsteFarbe(){
   for(var i=0;i<KACHELFARBEN.length;i++){
@@ -1236,6 +1338,10 @@ function zeichneKacheln(){
     b.className="kachel"; b.type="button";
     var q=korb[k.id]||0;
     b.style.background=k.farbe;
+    b.style.color=schriftAuf(k.farbe);
+    /* Auf hellen Kacheln braucht es eine Kante, sonst schwimmen sie in der
+       weißen Karte. */
+    b.style.border = helligkeit(k.farbe)>0.5 ? "1px solid rgba(16,37,26,.18)" : "0";
     b.innerHTML='<span class="bez">'+esc(k.name)+'</span>'+
       '<span class="preis">'+eur(k.cent)+' &euro;</span>'+
       (q?'<span class="zahl">'+q+'</span>'+
@@ -1326,6 +1432,14 @@ function zeichneBericht(b){
   kasten.innerHTML=h;
   kasten.classList.remove("hide");
   $("btnBerichtZu").addEventListener("click",function(){ zeichneBericht(null); });
+}
+
+function zeichneTonWahl(){
+  var kn=$("wahlTon").querySelectorAll("button");
+  for(var i=0;i<kn.length;i++){
+    var an=(kn[i].getAttribute("data-ton")==="an")===!!db.ton;
+    kn[i].setAttribute("aria-pressed", an?"true":"false");
+  }
 }
 
 function zeichneNachtragen(){
@@ -1516,7 +1630,9 @@ function pruefe(roh){
   function befund(art,titel,dazu){
     feld.className="befund "+art;
     feld.innerHTML=esc(titel)+(dazu?'<div class="dazu">'+esc(dazu)+'</div>':"");
-    pruefungen.unshift({zeit:Date.now(), code:code, gut:art==="b-ja", text:titel});
+    var gut=(art==="b-ja");
+    klingen(gut);
+    pruefungen.unshift({zeit:Date.now(), code:code, gut:gut, text:titel});
     pruefungen=pruefungen.slice(0,12);
     zeichnePruefLog();
   }
@@ -2092,9 +2208,49 @@ function zeichneEvents(){
           (e.id===db.aktiv
             ? '<span class="marker m-ein">aktiv</span>'
             : '<button class="knopf klein" data-aktiv="'+esc(e.id)+'">aktivieren</button>')+
+          '<button class="knopf klein" data-evbearbeiten="'+esc(e.id)+'">Ändern</button>'+
           '<button class="knopf klein warn" data-evweg="'+esc(e.id)+'">Löschen</button></div>';
       }).join("")
     : '<div class="muted">Noch keine Veranstaltung angelegt.</div>';
+}
+
+/* Wie bei den Kategorien: geändert wird im selben Formular, in dem auch
+   angelegt wird.
+
+   Eine Ausnahme gibt es, und die ist wichtig. Das Kürzel steckt in jedem
+   Code und ist mitsigniert. Wird es geändert, nachdem Karten gedruckt sind,
+   verliert jede davon ihre Gültigkeit — am Einlass stünde "Fremde
+   Veranstaltung". Solange Karten da sind, bleibt das Kürzel deshalb
+   gesperrt; Name, Datum und Ort ändern sich, so oft es sein muss. */
+var evImUmbau=null;
+
+function evFormular(id){
+  evImUmbau=id||null;
+  var e=id?evNachId(id):null;
+  var karten=id?db.tickets.filter(function(t){return t.evId===id;}).length:0;
+  $("evName").value  = e ? e.name  : "";
+  $("evDatum").value = e ? (e.datum||"") : "";
+  $("evKuerzel").value = e ? e.kuerzel : "";
+  $("evOrt").value   = e ? (e.ort||"") : "";
+  $("evKuerzel").disabled = !!(e && karten);
+  $("btnEvNeu").textContent = e ? "Änderung speichern" : "Veranstaltung anlegen";
+  $("btnEvAbbrechen").classList.toggle("hide", !e);
+  var sperre=$("evKuerzelSperre");
+  sperre.classList.toggle("hide", !(e && karten));
+  if(e && karten){
+    /* "gibt es" trägt Ein- und Mehrzahl gleichermaßen; "sind gedruckt"
+       ergäbe bei einer einzigen Karte einen falschen Satz. */
+    sperre.textContent="Das Kürzel ist gesperrt: zu dieser Veranstaltung gibt es "+
+      "schon "+mehrzahl(karten,"Karte","Karten")+". Es steckt in jedem Code und "+
+      "ist mitsigniert — eine Änderung machte alle ungültig.";
+  }
+  $("evFehler").classList.add("hide");
+  if(e) $("evName").focus();
+}
+
+function evNachId(id){
+  for(var i=0;i<db.events.length;i++) if(db.events[i].id===id) return db.events[i];
+  return null;
 }
 
 function zeichneKats(){
@@ -2148,7 +2304,7 @@ function katFormular(id){
 
 function allesZeichnen(){
   zeichneEvents(); zeichneKats(); zeichneKacheln(); zeichneBuchung();
-  zeichneLayoutWahl(); zeichneSammelWahl(); zeichneNachtragen(); zeichneWolke();
+  zeichneLayoutWahl(); zeichneSammelWahl(); zeichneNachtragen(); zeichneTonWahl(); zeichneWolke();
   zeichneListe(); zeichneZahlen();
 }
 
@@ -2179,6 +2335,7 @@ function start(){
   $("wolkeWort").value=(db.ablage&&db.ablage.wort)||"";
   allesZeichnen();
   katFormular(null);
+  evFormular(null);
   zeichnePruefLog();
   wolkeUhrStellen();
   /* Beim Öffnen einmal holen: das Gerät soll nicht mit einem Stand von
@@ -2211,12 +2368,13 @@ function start(){
 
   /* ---- Einlass ---- */
   $("btnPruefen").addEventListener("click",function(){
+    klangWecken();
     pruefe($("scanFeld").value); $("scanFeld").select();
   });
   $("scanFeld").addEventListener("keydown",function(e){
     if(e.key==="Enter"){ pruefe(this.value); this.select(); }
   });
-  $("btnKamera").addEventListener("click",kameraUmschalten);
+  $("btnKamera").addEventListener("click",function(){ klangWecken(); kameraUmschalten(); });
 
   /* ---- Tickets ---- */
   $("suche").addEventListener("input",zeichneListe);
@@ -2258,25 +2416,42 @@ function start(){
     if(!/^[A-Z0-9]{2,6}$/.test(kuerzel)){
       fehler("Das Kürzel besteht aus zwei bis sechs Buchstaben oder Ziffern, ohne Bindestrich."); return;
     }
-    if(eventNachKuerzel(kuerzel)){ fehler("Dieses Kürzel ist schon vergeben."); return; }
+    var schon=eventNachKuerzel(kuerzel);
+    if(schon && schon.id!==evImUmbau){ fehler("Dieses Kürzel ist schon vergeben."); return; }
     f.classList.add("hide");
+
+    if(evImUmbau){
+      var e=evNachId(evImUmbau);
+      if(e){
+        e.name=name; e.datum=datum; e.ort=ort;
+        /* Das Kürzel nur, solange keine Karte daran hängt — sonst wäre das
+           Feld ohnehin gesperrt gewesen. */
+        if(!db.tickets.some(function(t){return t.evId===e.id;})) e.kuerzel=kuerzel;
+      }
+      sichern(); evFormular(null);
+      allesZeichnen(); wolkeVormerken(); melden("Veranstaltung geändert");
+      return;
+    }
 
     var id="e"+Date.now();
     db.events.push({id:id,name:name,datum:datum,kuerzel:kuerzel,ort:ort});
     db.aktiv=id; korb={}; sichern();
-    $("evName").value=""; $("evKuerzel").value=""; $("evDatum").value=""; $("evOrt").value="";
-    allesZeichnen(); melden("Veranstaltung angelegt");
+    evFormular(null);
+    allesZeichnen(); wolkeVormerken(); melden("Veranstaltung angelegt");
   });
 
   $("evListe").addEventListener("click",function(e){
     var an=e.target.getAttribute&&e.target.getAttribute("data-aktiv");
     var weg=e.target.getAttribute&&e.target.getAttribute("data-evweg");
+    var bearbeiten=e.target.getAttribute&&e.target.getAttribute("data-evbearbeiten");
+    if(bearbeiten){ evFormular(bearbeiten); return; }
     if(an){ db.aktiv=an; korb={}; sichern(); allesZeichnen(); }
     if(weg){
       var zahl=db.tickets.filter(function(t){return t.evId===weg;}).length;
       if(zahl && !confirm("Zu dieser Veranstaltung gibt es "+zahl+
           (zahl===1?" Ticket":" Tickets")+". Mit der Veranstaltung wird auch das gelöscht. Fortfahren?"))
         return;
+      if(evImUmbau===weg) evFormular(null);
       db.events=db.events.filter(function(x){return x.id!==weg;});
       db.tickets=db.tickets.filter(function(t){return t.evId!==weg;});
       /* Auch der Nummernstand muss weg, sonst zählt eine gleichnamige
@@ -2317,6 +2492,7 @@ function start(){
   });
 
   $("btnKatAbbrechen").addEventListener("click",function(){ katFormular(null); });
+  $("btnEvAbbrechen").addEventListener("click",function(){ evFormular(null); });
 
   $("katFarben").addEventListener("click",function(e){
     var f=e.target.getAttribute&&e.target.getAttribute("data-farbe");
@@ -2347,6 +2523,13 @@ function start(){
 
   /* ---- Veranstalter ---- */
   /* ---- Einlass ---- */
+  $("wahlTon").addEventListener("click",function(e){
+    var w=e.target.getAttribute&&e.target.getAttribute("data-ton");
+    if(!w) return;
+    db.ton=(w==="an"); sichern(); zeichneTonWahl();
+    if(db.ton){ klangWecken(); klingen(true); }
+    melden(db.ton?"Ton an":"Ton aus");
+  });
   $("wahlNachtragen").addEventListener("click",function(e){
     var w=e.target.getAttribute&&e.target.getAttribute("data-nachtragen");
     if(!w) return;

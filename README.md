@@ -70,6 +70,31 @@ Reihe steht alles daneben.
 Der QR-Code misst auf dem Etikett 29 mm bei 25 Modulen, also einen
 Millimeter je Punkt — reichlich für jede Handykamera.
 
+## Ton am Einlass
+
+Wer die Karte hinhält, schaut nicht auf den Bildschirm. Deshalb gibt die
+Kasse Laut: ein heller, steigender Zweiklang für gültig, ein tiefes Brummen
+für abgewiesen. Im Dunkeln vor der Tür unterscheidet man das ohne
+hinzusehen. Abschalten unter *Einstellungen → Einlass → Ton beim Prüfen*.
+
+Die Töne werden im Browser erzeugt, nicht aus Dateien geladen — die Kasse
+bleibt eine einzige Datei. Der erste Ton kommt allerdings erst, nachdem
+einmal auf *Prüfen* oder *Kamera* getippt wurde: vorher lässt kein Browser
+Klang zu.
+
+## Was sich ändern lässt, und was nicht
+
+Veranstaltungen und Kategorien lassen sich nachträglich ändern — bei einer
+Veranstaltung Name, Datum und Ort, bei einer Kategorie Bezeichnung, Preis
+und Farbe. Bereits verkaufte Karten behalten dabei, was zum Zeitpunkt des
+Verkaufs galt; sonst schriebe eine Preisänderung am Abend die Einnahmen des
+Nachmittags um.
+
+Eine Ausnahme: **das Kürzel einer Veranstaltung ist gesperrt, sobald Karten
+dazu gedruckt sind.** Es steckt in jedem Code und ist mitsigniert — eine
+Änderung machte jede gedruckte Karte ungültig, am Einlass stünde „Fremde
+Veranstaltung". Solange noch keine Karte da ist, lässt es sich frei ändern.
+
 ## Zwei Geräte, ein Abend
 
 Drinnen wird verkauft, draußen wird gescannt — dafür müssen die Geräte nicht
@@ -181,7 +206,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **1.5** | farbige Kacheln, Kategorien änderbar, Sammelkarten, Etikettendruck |
+| **1.6** | Hausfarben auf den Kacheln, Veranstaltungen änderbar, Ton am Einlass |
+| 1.5 | farbige Kacheln, Kategorien änderbar, Sammelkarten, Etikettendruck |
 | 1.4 | Ablage im Drive: die Geräte gleichen sich selbst ab |
 | 1.3 | Zusammenführen zweier Stände von Hand, über eine Sicherung |
 | 1.2 | Nachtragen unbekannter Karten am Einlass, Kassenzeichen |
