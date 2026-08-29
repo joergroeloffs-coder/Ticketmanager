@@ -1519,14 +1519,31 @@ function zusammenfuehren(roh){
       return;
     }
 
-    /* Dieselbe Nummer, eine andere Signatur: dann haben zwei Geräte
-       unabhängig voneinander dieselbe Nummer vergeben. Es sind zwei
-       verschiedene Karten, und welche hier steht, kann niemand mehr
-       sagen. Das wird gemeldet und nicht stillschweigend überschrieben. */
+    /* Zwei Geräte ohne eigenes Kassenzeichen vergeben beide die 0001. Die
+       Signatur hilft hier nicht weiter: sie wird aus Kürzel und Nummer
+       gerechnet und ist dann zwangsläufig dieselbe. Zwei verschiedene
+       Verkäufe tragen also denselben Code — auf Papier nicht mehr
+       auseinanderzuhalten.
+
+       Erkennen lässt es sich am Inhalt: zwei echte Verkäufe mit derselben
+       Nummer, aber verschiedener Kategorie, verschiedenem Preis oder
+       verschiedener Uhrzeit können nicht dieselbe Karte sein. Sie hier
+       zusammenzuwerfen hieße, einen Verkauf aus der Abrechnung zu
+       streichen. Also wird gemeldet und nichts angefasst. */
     if(lt.sig!==ft.sig){
       b.widersprueche.push({code:ticketCode(lt),
-        text:"Dieselbe Nummer, zwei verschiedene Signaturen. Vermutlich haben zwei "+
-             "Geräte ohne eigenes Kassenzeichen verkauft."});
+        text:"Dieselbe Nummer, zwei verschiedene Signaturen. Die Sicherung stammt "+
+             "wohl aus einer anderen Kasse."});
+      return;
+    }
+    if(!lt.nachgetragen && !ft.nachgetragen &&
+       (lt.kat!==ft.kat || lt.cent!==ft.cent || lt.erstellt!==ft.erstellt)){
+      b.widersprueche.push({code:ticketCode(lt),
+        text:"Zwei verschiedene Verkäufe unter derselben Nummer: hier "+
+             esc(lt.kat)+" für "+eur(lt.cent)+" €, in der Sicherung "+
+             esc(ft.kat)+" für "+eur(ft.cent)+" €. Beide Geräte haben ohne eigenes "+
+             "Kassenzeichen verkauft. Der zweite Verkauf muss von Hand nachgetragen "+
+             "werden; hier bleibt der eigene stehen."});
       return;
     }
 

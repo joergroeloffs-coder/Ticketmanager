@@ -59,6 +59,42 @@ Die nachgetragenen Karten stehen in der Übersicht für sich. Sie zählen nicht
 zu den Einnahmen dieses Geräts, denn ihr Preis steht nicht im Code — er
 liegt beim Gerät, das sie verkauft hat.
 
+## Am Ende des Abends: zusammenführen
+
+Nach dem Einlass weiß das eine Gerät, wer bezahlt hat, und das andere, wer
+gekommen ist. Erst beides zusammen ergibt den Abend.
+
+*Einstellungen → Sicherung → **Zusammenführen*** nimmt die Sicherung des
+anderen Geräts und legt sie über den eigenen Stand. Nicht "die neuere Datei
+gewinnt" — das löschte, was das andere Gerät in der Zwischenzeit getan hat.
+Sondern Karte für Karte:
+
+- Karte hier unbekannt → übernehmen, mitsamt Kategorie und Preis
+- hier nachgetragen, dort verkauft → Kategorie und Preis nachziehen. Der
+  Nachtrag ist damit geklärt und die Karte zählt wieder zu den Einnahmen
+- hier offen, dort eingelöst → eingelöst, mit dem früheren Zeitpunkt
+- Widersprüche werden **gemeldet, nicht aufgelöst**
+
+Danach steht auf dem Gerät, in das eingelesen wurde, der ganze Abend. Die
+Richtung ist beliebig, und derselbe Abgleich zweimal ausgeführt ändert beim
+zweiten Mal nichts mehr.
+
+Gemeldet werden zwei Fälle. **Hier storniert, dort eingelöst** — jemand ist
+mit einer stornierten Karte hineingekommen; die Karte gilt danach als
+eingelöst, weil der Einlass geschehen ist, aber der Fall steht im Bericht.
+Und **zwei Verkäufe unter derselben Nummer** — das passiert, wenn zwei Geräte
+ohne eigenes Kassenzeichen verkauft haben. Beide Karten tragen dann denselben
+Code, auf Papier nicht mehr zu unterscheiden. Der fremde Verkauf muss von Hand
+nachgetragen werden. Das Kassenzeichen verhindert genau das; es ist der Grund,
+warum es existiert.
+
+Der Schlüssel muss auf beiden Geräten derselbe sein, sonst wird der Abgleich
+abgelehnt: Karten aus einer anderen Kasse ließen sich hier nicht prüfen.
+
+*Stattdessen ersetzen* gibt es weiterhin — es wirft alles Gespeicherte weg und
+übernimmt die Datei. Das ist der Weg, ein frisches Gerät einzurichten, und
+nicht der Weg, zwei Stände zusammenzubringen.
+
 ## Herkunft
 
 Farben, Maße und Druckbild stammen aus dem Fering Vereinsmanager, der
