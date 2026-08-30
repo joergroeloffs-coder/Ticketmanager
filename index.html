@@ -335,6 +335,24 @@ td.n,th.n{text-align:right}
 .bericht .fuss{margin-top:10mm;font-size:8pt;color:#444;
   border-top:0.6pt solid #000;padding-top:2mm}
 
+/* ---- Türliste ----
+   Eine lange Liste läuft über mehrere Seiten. Die Kopfzeile wird deshalb auf
+   jeder wiederholt, und keine Zeile darf am Seitenrand zerrissen werden. */
+.tuerliste table{font-size:9pt;margin-top:4mm}
+.tuerliste thead{display:table-header-group}
+.tuerliste tr{break-inside:avoid;page-break-inside:avoid}
+.tuerliste td{padding:1.1mm 2mm 1.1mm 0}
+.tuerliste th{padding-right:2mm}
+.tuerliste .kasten{width:6mm}
+.tuerliste td.n,.tuerliste th.n{padding-right:5mm}
+.tuerliste td.kasten::before{
+  content:"";display:inline-block;width:3.6mm;height:3.6mm;
+  border:0.5pt solid #000;vertical-align:-0.6mm}
+.tuerliste tr.weg td{color:#555;text-decoration:line-through}
+.tuerliste tr.weg td.kasten{text-decoration:none}
+.tuerliste tr.weg td.kasten::before{border-style:dashed;background:#e8e8e8}
+.tuerliste .klein{font-size:7.5pt;color:#444}
+
 /* ---- Etikettendrucker: ein Schildchen je Seite ---- */
 .bogen.rolle{padding:0}
 .rollenschild{
@@ -512,7 +530,10 @@ td.n,th.n{text-align:right}
   <div class="karte">
     <div class="titel">
       <h2>Einzeltickets</h2>
-      <button class="knopf klein" id="btnNachdruck">Offene neu drucken</button>
+      <div class="reihe">
+        <button class="knopf klein" id="btnTuerliste">Türliste drucken</button>
+        <button class="knopf klein" id="btnNachdruck">Offene neu drucken</button>
+      </div>
     </div>
     <div class="inhalt">
       <label class="feld"><span>Suchen</span>
@@ -544,6 +565,18 @@ td.n,th.n{text-align:right}
         <button class="knopf hide" id="btnEvAbbrechen">Abbrechen</button>
       </div>
       <div id="evFehler" class="hinweis hide"></div>
+    </div>
+  </div>
+
+  <div class="karte" id="karteArchiv">
+    <div class="titel"><h2>Archiv</h2></div>
+    <div class="inhalt">
+      <p class="muted" style="margin:0 0 12px">
+        Abgeschlossene Abende. Die Zahlen bleiben, die einzelnen Karten sind
+        fort — das hält den Stand klein, der bei jedem Abgleich über das Netz
+        geht. Karten eines abgeschlossenen Abends gelten am Einlass nicht mehr.
+      </p>
+      <div id="archivListe"></div>
     </div>
   </div>
 
@@ -809,7 +842,7 @@ td.n,th.n{text-align:right}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "2.4";
+var VERSION = "2.5";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
@@ -1114,6 +1147,22 @@ function leereDaten(){
     /* Je Veranstaltung der Zeitpunkt, an dem die Kasse geschlossen wurde.
        Eingelassen wird danach weiter — verkauft nicht mehr. */
     geschlossen:{},
+    /* Grabsteine. Ohne sie ist Löschen bei mehreren Geräten wirkungslos:
+       das eine Gerät wirft die Veranstaltung weg, beim nächsten Abgleich
+       bringt das andere sie zurück, weil sie in dessen Stand noch steht.
+       Ein Grabstein ist der Vermerk "das hier ist absichtlich fort" samt
+       Zeitpunkt; er reist mit und wird auf jedem Gerät ausgeführt.
+
+       Vermerkt wird unter der Kennung, an der auch der Abgleich die Dinge
+       wiedererkennt: Veranstaltungen am Kürzel, Kategorien am Namen. Karten
+       brauchen keinen eigenen Grabstein — einzelne Karten werden nicht
+       gelöscht, sondern storniert, und mit einer Veranstaltung fallen ihre
+       Karten von selbst. */
+    grabsteine:{ev:{}, kat:{}},
+    /* Abgeschlossene Veranstaltungen: die Zahlen bleiben, die Karten gehen.
+       Das ist die einzige Art, wie der Stand wieder kleiner wird — und das
+       muss er, weil bei jedem Abgleich der ganze Stand über das Netz geht. */
+    archiv:{},
     /* Das verbreitetste Herma-Raster: 70 × 37 mm, 24 je Bogen, drei mal
        acht, randlos. Alle Maße in Millimetern und einstellbar, damit sich
        auf eine andere Packung umstellen lässt, ohne etwas umzubauen. */
@@ -1172,6 +1221,21 @@ function migriere(d){
   neu.sammelkarte = !!d.sammelkarte;
   neu.ton = (d.ton!==false);
   if(d.geschlossen&&typeof d.geschlossen==="object") neu.geschlossen=d.geschlossen;
+  if(d.grabsteine&&typeof d.grabsteine==="object"){
+    ["ev","kat"].forEach(function(art){
+      var q=d.grabsteine[art];
+      if(q&&typeof q==="object") for(var k in q)
+        if(Object.prototype.hasOwnProperty.call(q,k) &&
+           Number.isFinite(Number(q[k])) && Number(q[k])!==0)
+          neu.grabsteine[art][k]=Number(q[k]);
+    });
+  }
+  if(d.archiv&&typeof d.archiv==="object"){
+    for(var ak in d.archiv) if(Object.prototype.hasOwnProperty.call(d.archiv,ak)){
+      var a=d.archiv[ak];
+      if(a&&typeof a==="object"&&a.name) neu.archiv[ak]=a;
+    }
+  }
   if(d.etikett&&typeof d.etikett==="object"){
     var e=neu.etikett;
     ["breite","hoehe","spalten","zeilen","randLinks","randOben","abstandX","abstandY"]
@@ -1564,6 +1628,7 @@ function zeichneBericht(b){
     ["Einlässe übernommen", b.einlaesse],
     ["Nachträge geklärt", b.geklaert],
     ["Stornos übernommen", b.stornos],
+    ["Abschlüsse übernommen", b.archiviertNeu],
   ].filter(function(z){ return z[1]>0; });
 
   var kopf = b.schluesselUebernommen
@@ -1582,6 +1647,16 @@ function zeichneBericht(b){
       }).join("")+'</table>'
     : '<div class="muted">Nichts zu übernehmen — die Sicherung enthielt nichts, '+
       'was hier nicht schon steht.</div>';
+
+  /* Ausgeführte Grabsteine bekommen eine eigene Zeile. Was fortgeräumt
+     wurde, verdient dieselbe Aufmerksamkeit wie das, was hinzukam — sonst
+     wundert sich am Abend jemand, wo die Veranstaltung geblieben ist. */
+  if(b.begraben.length){
+    h += '<div class="hinweis" style="margin-top:12px"><b>Auf einem anderen Gerät '+
+         'weggeräumt</b> — hier ebenfalls entfernt:<div style="margin-top:8px">'+
+         b.begraben.map(function(t){ return '<div>'+esc(t)+'</div>'; }).join("")+
+         '</div></div>';
+  }
 
   if(b.widersprueche.length){
     h += '<div class="hinweis" style="margin-top:12px"><b>'+
@@ -1803,6 +1878,121 @@ function abschlussDrucken(){
 
   h+='<div class="fuss">Aufgestellt von der Ticketkasse '+VERSION+
      '. Plätze, nicht Karten: eine Karte kann für mehrere gelten.</div></div>';
+
+  var bogen=$("bogen");
+  bogen.className="bogen bericht";
+  bogen.innerHTML=h;
+  setTimeout(function(){ window.print(); },80);
+}
+
+/* Der Abschluss eines abgelegten Abends. Gerechnet wird hier nichts mehr —
+   die Zahlen standen fest, als abgeschlossen wurde, und stehen so im
+   Archiv. */
+function archivDrucken(kuerzel){
+  var a=db.archiv[kuerzel]; if(!a) return;
+  seitenmass("");
+  var v=db.veranstalter||{};
+
+  function zeile(x,y,z,e,f,fett){
+    var st=fett?' style="font-weight:600"':'';
+    return '<tr'+st+'><td>'+x+'</td><td class="n">'+y+'</td><td class="n">'+z+'</td>'+
+           '<td class="n">'+e+'</td><td class="n">'+f+'</td></tr>';
+  }
+
+  var h='<div class="bericht">'+
+    '<div class="briefkopf">'+
+      '<div><div class="wer">'+esc(v.name||"")+'</div>'+
+      '<div class="zusatz">'+esc(v.zusatz||"")+'</div></div>'+
+      '<div class="rechts">'+esc(zeitpunkt(Date.now()))+'</div>'+
+    '</div>'+
+    '<div class="titel">Kassenabschluss</div>'+
+    '<div class="unter">'+esc(a.name)+
+      (a.datum?' · '+esc(datumLang(a.datum)):'')+
+      (a.ort?' · '+esc(a.ort):'')+' · Kürzel '+esc(a.kuerzel)+'</div>'+
+    '<div class="unter">Abgeschlossen am '+esc(zeitpunkt(a.abgelegt))+
+      (a.geschlossen?', Kasse geschlossen am '+esc(zeitpunkt(a.geschlossen)):'')+'</div>'+
+    '<table><tr><th>Kategorie</th><th class="n">verkauft</th><th class="n">eingelöst</th>'+
+    '<th class="n">offen</th><th class="n">Euro</th></tr>';
+
+  a.zeilen.forEach(function(z){
+    h+=zeile(esc(z.kat), z.verkauft, z.eingeloest, z.verkauft-z.eingeloest, eur(z.cent));
+  });
+  h+=zeile("Zusammen", a.summe.verkauft, a.summe.eingeloest-a.summe.nachgetragen,
+           a.summe.verkauft-(a.summe.eingeloest-a.summe.nachgetragen),
+           eur(a.summe.cent), true);
+  if(a.summe.nachgetragen)
+    h+=zeile("nachgetragen, anderswo verkauft","—",a.summe.nachgetragen,"—","—");
+  if(a.summe.storniert)
+    h+=zeile("storniert",a.summe.storniert,"—","—","—");
+  h+='</table>';
+
+  h+='<div class="fuss">Aus dem Archiv der Ticketkasse '+VERSION+'. Die einzelnen '+
+     'Karten dieses Abends ('+a.karten+') sind beim Abschließen entfallen; '+
+     'die Zahlen stammen aus dem Stand von damals.</div></div>';
+
+  var bogen=$("bogen");
+  bogen.className="bogen bericht";
+  bogen.innerHTML=h;
+  setTimeout(function(){ window.print(); },80);
+}
+
+/* ---- Die Türliste ----
+
+   Der Papierweg für den Fall, dass am Eingang nichts mehr geht: Akku leer,
+   Kamera streikt, Netz weg. Auf dem Blatt steht jede ausgegebene Karte mit
+   ihrer Nummer und ihrem Zustand, und daneben ein Kästchen zum Abhaken.
+   Damit lässt sich der Abend von Hand zu Ende bringen und danach eintragen.
+
+   Stornierte Karten stehen mit darauf, und zwar auffällig: eine Liste, die
+   nur die guten Karten zeigt, ließe die stornierte durch. */
+function tuerlisteDrucken(){
+  var ev=aktivesEvent(); if(!ev){ melden("Keine Veranstaltung aktiv"); return; }
+  seitenmass("");
+  var v=db.veranstalter||{};
+  var liste=db.tickets.filter(function(t){ return t.evId===ev.id; })
+                      .sort(function(x,y){ return x.nummer<y.nummer ? -1 : 1; });
+  if(!liste.length){ melden("Für diesen Abend gibt es noch keine Karten"); return; }
+
+  var offen=0, ein=0, storno=0, cent=0;
+  var reihen=liste.map(function(t){
+    var zustand, klasse="";
+    if(t.status==="storniert"){ zustand="storniert"; klasse=" class=\"weg\""; storno++; }
+    else if(t.status==="eingeloest"){ zustand="eingelöst"; ein++; }
+    else { zustand="offen"; offen++; }
+    if(t.status!=="storniert" && !t.nachgetragen) cent+=(t.cent||0);
+    var p=plaetzeVon(t);
+    return '<tr'+klasse+'><td class="kasten"></td>'+
+      '<td class="mono">'+esc(ticketCode(t))+'</td>'+
+      '<td>'+esc(t.kat||(t.nachgetragen?"nachgetragen":"—"))+
+        (p>1?' <span class="klein">('+p+' Plätze)</span>':'')+'</td>'+
+      '<td class="n">'+(t.nachgetragen?"—":eur(t.cent))+'</td>'+
+      '<td>'+esc(t.gast||"")+'</td>'+
+      '<td>'+zustand+'</td></tr>';
+  }).join("");
+
+  var h='<div class="bericht tuerliste">'+
+    '<div class="briefkopf">'+
+      '<div><div class="wer">'+esc(v.name||"")+'</div>'+
+      '<div class="zusatz">'+esc(v.zusatz||"")+'</div></div>'+
+      '<div class="rechts">'+esc(zeitpunkt(Date.now()))+'</div>'+
+    '</div>'+
+    '<div class="titel">Türliste</div>'+
+    '<div class="unter">'+esc(ev.name)+
+      (ev.datum?' · '+esc(datumLang(ev.datum)):'')+
+      (ev.ort?' · '+esc(ev.ort):'')+' · Kürzel '+esc(ev.kuerzel)+'</div>'+
+    '<div class="unter">'+mehrzahl(liste.length,"Karte","Karten")+
+      ' · '+offen+' offen · '+ein+' eingelöst'+(storno?' · '+storno+' storniert':'')+
+      ' · '+eur(cent)+' €</div>'+
+    /* Die Kopfzeile gehört in ein eigenes <thead>. Ohne das steckt sie im
+       stillschweigend erzeugten <tbody>, und dann wiederholt der Browser sie
+       auf der zweiten Seite nicht — bei vierzig Karten sind das genau die
+       Seiten, auf denen niemand mehr weiß, welche Spalte was ist. */
+    '<table><thead><tr><th class="kasten"></th><th>Code</th><th>Kategorie</th>'+
+    '<th class="n">Euro</th><th>Name</th><th>Zustand</th></tr></thead><tbody>'+
+    reihen+'</tbody></table>'+
+    '<div class="fuss">Stand vom '+esc(zeitpunkt(Date.now()))+'. Wer hier abhakt, '+
+    'trägt den Einlass hinterher in der Kasse nach — sonst fehlt er in der '+
+    'Abrechnung. Durchgestrichene Zeilen sind storniert und gelten nicht.</div></div>';
 
   var bogen=$("bogen");
   bogen.className="bogen bericht";
@@ -2206,6 +2396,86 @@ function zeichneZahlen(){
 
 }
 
+/* ====================== Aufräumen und Archiv ======================
+
+   Löschen ist bei mehreren Geräten kein Wegwerfen, sondern eine Nachricht:
+   "das hier soll fort". Sie muss aufgeschrieben werden und mitreisen, sonst
+   holt der nächste Abgleich das Gelöschte zurück — das andere Gerät hat es
+   ja noch. Der Vermerk heißt hier Grabstein.
+
+   Abschließen ist der zweite Teil derselben Sache. Nach dem Abend braucht
+   niemand mehr die dreihundert einzelnen Karten; die Zahlen genügen. Beim
+   Abschließen wird der Abend auf seine Zahlen eingedampft, die Karten
+   fallen fort, und ein Grabstein sorgt dafür, dass sie auf den anderen
+   Geräten ebenfalls fallen. Das ist die einzige Stelle, an der der Stand
+   wieder kleiner wird. Er muss kleiner werden können: bei jedem Abgleich
+   geht der ganze Stand über das Netz, und ohne Abschließen wächst er über
+   die Jahre monoton. */
+
+/* Ein Grabstein ist ein Zeitpunkt mit Vorzeichen: positiv heißt begraben,
+   negativ heißt wiederbelebt. Den Vermerk einfach zu löschen genügte nicht —
+   das andere Gerät hätte ihn noch und wiese das Zurückgeholte weiterhin ab.
+   Es muss also auch das Zurückholen eine Nachricht sein, die reist, und beim
+   Abgleich gewinnt schlicht die jüngere der beiden. */
+function grabsteinSetzen(art, kennung){
+  if(!kennung) return;
+  db.grabsteine[art][kennung]=Date.now();
+}
+
+function grabsteinLoesen(art, kennung){
+  if(!kennung) return;
+  if(db.grabsteine[art][kennung]) db.grabsteine[art][kennung]=-Date.now();
+}
+
+function istBegraben(art, kennung){
+  return !!(db.grabsteine && db.grabsteine[art] &&
+            (db.grabsteine[art][kennung]||0) > 0);
+}
+
+/* Eine Veranstaltung samt Karten und Nummernstand aus dem laufenden Betrieb
+   nehmen. Der Nummernstand muss mit: sonst zählte eine gleichnamige
+   Veranstaltung später an alter Stelle weiter. */
+function eventEntfernen(evId){
+  var zahl=0;
+  db.tickets=db.tickets.filter(function(t){
+    if(t.evId===evId){ zahl++; return false; }
+    return true;
+  });
+  db.events=db.events.filter(function(x){ return x.id!==evId; });
+  delete db.nummern[evId];
+  delete db.geschlossen[evId];
+  if(db.aktiv===evId) db.aktiv=db.events.length ? db.events[0].id : null;
+  return zahl;
+}
+
+/* Was vom Abend bleibt: die Zahlen, wie sie der Kassenabschluss zeigt,
+   und woher sie stammen. Klein genug, dass hundert Abende weniger wiegen
+   als ein einziger mit seinen Karten. */
+function archivEintrag(ev){
+  var d=abschlussDaten(ev), zeilen=[];
+  var namen=db.kats.map(function(k){ return k.name; });
+  Object.keys(d.nach).forEach(function(k){ if(namen.indexOf(k)<0) namen.push(k); });
+  namen.forEach(function(k){
+    var z=d.nach[k];
+    if(z) zeilen.push({kat:k, verkauft:z.verkauft, eingeloest:z.eingeloest, cent:z.cent});
+  });
+  return {
+    kuerzel:ev.kuerzel, name:ev.name, datum:ev.datum||"", ort:ev.ort||"",
+    geschlossen:d.zeit||null, abgelegt:Date.now(),
+    zeilen:zeilen,
+    summe:{verkauft:d.summe.verkauft, eingeloest:d.summe.eingeloest,
+           storniert:d.summe.storniert, nachgetragen:d.summe.nachgetragen,
+           cent:d.summe.cent},
+    karten:db.tickets.filter(function(t){ return t.evId===ev.id; }).length
+  };
+}
+
+function archivieren(ev){
+  db.archiv[ev.kuerzel]=archivEintrag(ev);
+  grabsteinSetzen("ev", ev.kuerzel);
+  return eventEntfernen(ev.id);
+}
+
 /* ========================= Zusammenführen =========================
 
    Zwei Geräte an einem Abend: drinnen wird verkauft, draußen eingelassen.
@@ -2225,7 +2495,8 @@ function zusammenfuehren(roh){
   var fremd=migriere(roh);
 
   var b={eventsNeu:0, katsNeu:0, ticketsNeu:0, einlaesse:0, stornos:0,
-         geklaert:0, widersprueche:[], schluesselUebernommen:false};
+         geklaert:0, widersprueche:[], schluesselUebernommen:false,
+         begraben:[], archiviertNeu:0};
 
   /* Ohne denselben Schlüssel wären die übernommenen Karten hier nicht
      prüfbar: ihre Signaturen ließen sich nicht nachrechnen, und am Einlass
@@ -2250,9 +2521,52 @@ function zusammenfuehren(roh){
     b.schluesselUebernommen=true;
   }
 
+  /* --- Grabsteine zuerst ---
+
+     Erst werden beide Listen vereinigt, dann wird ausgeführt, was hier noch
+     nicht ausgeführt ist. In dieser Reihenfolge, denn ein Grabstein muss
+     schon stehen, wenn gleich darauf die Veranstaltungen der Gegenseite
+     eingespielt werden — sonst käme das Gelöschte im selben Abgleich wieder
+     herein, in dem es weggeräumt wurde.
+
+     Ein Grabstein gewinnt gegen alles. Das ist eine Entscheidung, keine
+     Naturgesetzlichkeit: hat ein Gerät den Abend abgeschlossen, während ein
+     anderes noch eine Karte verkauft hat, ist diese Karte danach fort. Sie
+     ist nicht verloren — sie steht in den Zahlen des Archivs des Geräts,
+     das abgeschlossen hat, sofern der Verkauf vorher angekommen war.
+     Deshalb wird jedes ausgeführte Löschen im Bericht genannt und nicht
+     stillschweigend erledigt. */
+  ["ev","kat"].forEach(function(art){
+    var fg=(fremd.grabsteine&&fremd.grabsteine[art])||{};
+    for(var k in fg) if(Object.prototype.hasOwnProperty.call(fg,k)){
+      /* Der Betrag ist der Zeitpunkt, das Vorzeichen die Aussage. Verglichen
+         wird der Zeitpunkt: die jüngere Nachricht gilt, ob sie nun begräbt
+         oder zurückholt. */
+      var hier=db.grabsteine[art][k]||0;
+      if(Math.abs(fg[k])>Math.abs(hier)) db.grabsteine[art][k]=fg[k];
+    }
+  });
+  for(var ak in fremd.archiv) if(Object.prototype.hasOwnProperty.call(fremd.archiv,ak)){
+    if(!db.archiv[ak]){ db.archiv[ak]=fremd.archiv[ak]; b.archiviertNeu++; }
+  }
+
+  db.events.slice().forEach(function(e){
+    if(!istBegraben("ev", e.kuerzel)) return;
+    var zahl=eventEntfernen(e.id);
+    b.begraben.push(e.name+(zahl? " samt "+mehrzahl(zahl,"Karte","Karten") : ""));
+  });
+  db.kats.slice().forEach(function(k){
+    if(!istBegraben("kat", k.name)) return;
+    db.kats=db.kats.filter(function(x){ return x.id!==k.id; });
+    b.begraben.push("Kategorie "+k.name);
+  });
+
   /* --- Veranstaltungen über das Kürzel --- */
   var evAbbildung={};
   fremd.events.forEach(function(fe){
+    /* Begraben heißt begraben: die Veranstaltung kommt nicht zurück, und
+       weil sie in der Abbildung fehlt, fallen ihre Karten gleich mit. */
+    if(istBegraben("ev", fe.kuerzel)) return;
     var le=null;
     for(var i=0;i<db.events.length;i++) if(db.events[i].kuerzel===fe.kuerzel) le=db.events[i];
     if(!le){
@@ -2267,6 +2581,7 @@ function zusammenfuehren(roh){
 
   /* --- Kategorien über den Namen --- */
   fremd.kats.forEach(function(fk){
+    if(istBegraben("kat", fk.name)) return;
     if(!db.kats.some(function(k){return k.name===fk.name;})){
       /* Die Farbe gehört zur Kategorie und muss mitkommen — sonst stünde auf
          dem zweiten Gerät dieselbe Kategorie in einer anderen Farbe, und die
@@ -2404,7 +2719,8 @@ var hochgeladenBei=-1;
 function wolkeBereit(){ return !!(db.ablage && db.ablage.adresse); }
 
 function etwasGebracht(b){
-  return !!(b && (b.ticketsNeu||b.einlaesse||b.geklaert||b.stornos||b.eventsNeu||b.katsNeu));
+  return !!(b && (b.ticketsNeu||b.einlaesse||b.geklaert||b.stornos||b.eventsNeu||b.katsNeu||
+                  b.archiviertNeu||(b.begraben&&b.begraben.length)));
 }
 
 function zeichneWolke(){
@@ -2578,11 +2894,14 @@ function wolkeAbgleichen(versuch){
                  mehrzahl(b.stornos,"Storno","Stornos")]
               .filter(Boolean).join(", ")+" übernommen"
         : "";
+      if(b && b.begraben.length)
+        dazu += " · "+mehrzahl(b.begraben.length,"Eintrag","Einträge")+" weggeräumt";
       wolkeSagen("Abgeglichen "+uhrzeit(Date.now())+" Uhr"+dazu+
                  (e.ablegen.unveraendert && !dazu ? " · nichts Neues" : ""));
       /* Widersprüche und eine Schlüsselübernahme sind beide zu wichtig, um
          nur in der Statuszeile zu stehen. */
-      if(b && (b.schluesselUebernommen || (b.widersprueche && b.widersprueche.length)))
+      if(b && (b.schluesselUebernommen || (b.widersprueche && b.widersprueche.length) ||
+               b.begraben.length))
         zeichneBericht(b);
       return true;
     })
@@ -2771,6 +3090,7 @@ function zeichneEvents(){
             ? '<span class="marker m-ein">aktiv</span>'
             : '<button class="knopf klein" data-aktiv="'+esc(e.id)+'">aktivieren</button>')+
           '<button class="knopf klein" data-evbearbeiten="'+esc(e.id)+'">Ändern</button>'+
+          '<button class="knopf klein" data-evarchiv="'+esc(e.id)+'">Abschließen</button>'+
           '<button class="knopf klein warn" data-evweg="'+esc(e.id)+'">Löschen</button></div>';
       }).join("")
     : '<div class="muted">Noch keine Veranstaltung angelegt.</div>';
@@ -2866,9 +3186,26 @@ function katFormular(id){
   if(k) $("katName").focus();
 }
 
+function zeichneArchiv(){
+  var kasten=$("archivListe"); if(!kasten) return;
+  var schluessel=Object.keys(db.archiv).sort(function(a,b){
+    return (db.archiv[b].datum||"")<(db.archiv[a].datum||"") ? -1 : 1;
+  });
+  $("karteArchiv").classList.toggle("hide", schluessel.length===0);
+  kasten.innerHTML = schluessel.map(function(k){
+    var a=db.archiv[k];
+    return '<div class="zeile">'+
+      '<span class="grow"><b>'+esc(a.name)+'</b><br>'+
+      '<span class="muted"><span class="mono">'+esc(a.kuerzel)+'</span> · '+
+      esc(a.datum?datumKurz(a.datum):"ohne Datum")+(a.ort?' · '+esc(a.ort):'')+
+      ' · '+a.summe.verkauft+' Plätze · '+eur(a.summe.cent)+' €</span></span>'+
+      '<button class="knopf klein" data-archivdruck="'+esc(k)+'">Drucken</button></div>';
+  }).join("");
+}
+
 function allesZeichnen(){
   if($("schluessel")) $("schluessel").value=db.schluessel;
-  zeichneEvents(); zeichneKats(); zeichneKacheln(); zeichneBuchung();
+  zeichneEvents(); zeichneKats(); zeichneArchiv(); zeichneKacheln(); zeichneBuchung();
   zeichneLayoutWahl(); zeichneSammelWahl(); zeichneNachtragen(); zeichneTonWahl(); zeichneWolke();
   zeichneListe(); zeichneZahlen(); zeichneAbschluss();
 }
@@ -2990,6 +3327,11 @@ function start(){
   });
 
   $("btnAbschlussDrucken").addEventListener("click",abschlussDrucken);
+  $("btnTuerliste").addEventListener("click",tuerlisteDrucken);
+  $("archivListe").addEventListener("click",function(e){
+    var k=e.target.getAttribute&&e.target.getAttribute("data-archivdruck");
+    if(k) archivDrucken(k);
+  });
 
   $("btnNachdruck").addEventListener("click",function(){
     var ev=aktivesEvent();
@@ -3011,6 +3353,17 @@ function start(){
     }
     var schon=eventNachKuerzel(kuerzel);
     if(schon && schon.id!==evImUmbau){ fehler("Dieses Kürzel ist schon vergeben."); return; }
+    /* Ein Kürzel, das schon einmal begraben wurde, kommt hier absichtlich
+       zurück. Bliebe der Grabstein stehen, würde die neue Veranstaltung auf
+       den anderen Geräten stillschweigend abgewiesen — und niemand wüsste,
+       warum sie dort nicht auftaucht. */
+    if(db.archiv[kuerzel] && !evImUmbau &&
+       !confirm("Unter dem Kürzel "+kuerzel+" liegt schon ein Abschluss im Archiv "+
+                "(„"+db.archiv[kuerzel].name+"“).\n\nDas Kürzel noch einmal zu "+
+                "verwenden ist möglich, macht die Zuordnung im Archiv aber "+
+                "mehrdeutig. Fortfahren?"))
+      return;
+    grabsteinLoesen("ev", kuerzel);
     f.classList.add("hide");
 
     if(evImUmbau){
@@ -3036,22 +3389,40 @@ function start(){
   $("evListe").addEventListener("click",function(e){
     var an=e.target.getAttribute&&e.target.getAttribute("data-aktiv");
     var weg=e.target.getAttribute&&e.target.getAttribute("data-evweg");
+    var archiv=e.target.getAttribute&&e.target.getAttribute("data-evarchiv");
     var bearbeiten=e.target.getAttribute&&e.target.getAttribute("data-evbearbeiten");
     if(bearbeiten){ evFormular(bearbeiten); return; }
     if(an){ db.aktiv=an; korb={}; sichern(); allesZeichnen(); }
+    if(archiv){
+      var ea=db.events.filter(function(x){return x.id===archiv;})[0];
+      if(!ea) return;
+      var da=abschlussDaten(ea), za=db.tickets.filter(function(t){return t.evId===ea.id;}).length;
+      if(!confirm("„"+ea.name+"“ abschließen?\n\n"+
+                  da.summe.verkauft+" Plätze verkauft, "+eur(da.summe.cent)+" €\n"+
+                  mehrzahl(za,"Karte","Karten")+" werden aus dem laufenden Betrieb "+
+                  "genommen; die Zahlen bleiben im Archiv.\n\n"+
+                  "Danach lässt sich für diesen Abend nicht mehr verkaufen und keine "+
+                  "Karte mehr am Einlass prüfen. Auf den anderen Geräten geschieht "+
+                  "beim nächsten Abgleich dasselbe."))
+        return;
+      if(evImUmbau===archiv) evFormular(null);
+      archivieren(ea);
+      korb={}; sichern(); allesZeichnen(); wolkeVormerken();
+      melden("Abgeschlossen und ins Archiv gelegt");
+    }
     if(weg){
       var zahl=db.tickets.filter(function(t){return t.evId===weg;}).length;
       if(zahl && !confirm("Zu dieser Veranstaltung gibt es "+zahl+
           (zahl===1?" Ticket":" Tickets")+". Mit der Veranstaltung wird auch das gelöscht. Fortfahren?"))
         return;
+      var ew=db.events.filter(function(x){return x.id===weg;})[0];
       if(evImUmbau===weg) evFormular(null);
-      db.events=db.events.filter(function(x){return x.id!==weg;});
-      db.tickets=db.tickets.filter(function(t){return t.evId!==weg;});
-      /* Auch der Nummernstand muss weg, sonst zählt eine gleichnamige
-         Veranstaltung später an alter Stelle weiter. */
-      delete db.nummern[weg];
-      if(db.aktiv===weg) db.aktiv=db.events.length?db.events[0].id:null;
-      korb={}; sichern(); allesZeichnen();
+      /* Der Grabstein muss vor dem Entfernen gesetzt werden — danach ist das
+         Kürzel nicht mehr da, unter dem er stehen soll. Ohne ihn brächte der
+         nächste Abgleich die Veranstaltung vom anderen Gerät zurück. */
+      if(ew) grabsteinSetzen("ev", ew.kuerzel);
+      eventEntfernen(weg);
+      korb={}; sichern(); allesZeichnen(); wolkeVormerken();
     }
   });
 
@@ -3069,6 +3440,10 @@ function start(){
       f.classList.remove("hide"); return;
     }
     f.classList.add("hide");
+    /* Wie beim Kürzel: eine Kategorie, die schon einmal begraben wurde,
+       kehrt hier absichtlich zurück, und der Grabstein muss weichen. Sonst
+       wiesen die anderen Geräte sie beim Abgleich stumm ab. */
+    grabsteinLoesen("kat", name);
 
     if(katImUmbau){
       var k=katNachId(katImUmbau);
@@ -3077,10 +3452,16 @@ function start(){
            Bezeichnung und Preis, die zum Zeitpunkt des Verkaufs galten —
            sonst schriebe eine Preisänderung am Abend die Einnahmen des
            Nachmittags um. */
+        /* Der Abgleich erkennt Kategorien am Namen. Wird umbenannt, ist der
+           alte Name für die anderen Geräte eine Kategorie, die es hier nicht
+           mehr gibt — sie käme beim nächsten Abgleich als zweite Kachel
+           zurück. Der alte Name bekommt deshalb einen Grabstein. */
+        if(k.name!==name) grabsteinSetzen("kat", k.name);
         k.name=name; k.cent=c; k.farbe=gewaehlteFarbe; k.limit=grenze;
       }
       sichern(); katFormular(null);
-      zeichneKats(); zeichneKacheln(); zeichneBuchung(); melden("Kategorie geändert");
+      zeichneKats(); zeichneKacheln(); zeichneBuchung();
+      wolkeVormerken(); melden("Kategorie geändert");
       return;
     }
 
@@ -3114,10 +3495,12 @@ function start(){
       var kw=katNachId(weg);
       if(kw && !confirm("Kategorie „"+kw.name+"“ löschen? Bereits verkaufte Karten "+
                         "bleiben unberührt.")) return;
+      if(kw) grabsteinSetzen("kat", kw.name);
       db.kats=db.kats.filter(function(k){return k.id!==weg;}); delete korb[weg];
       if(katImUmbau===weg) katFormular(null);
     }
-    if(hoch||runter||weg){ sichern(); zeichneKats(); zeichneKacheln(); zeichneBuchung(); }
+    if(hoch||runter||weg){ sichern(); zeichneKats(); zeichneKacheln(); zeichneBuchung();
+                           wolkeVormerken(); }
   });
 
   /* ---- Veranstalter ---- */

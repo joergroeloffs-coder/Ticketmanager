@@ -223,6 +223,56 @@ Kassenprüfung will einen Beleg sehen, kein Bildschirmfoto.
 Gezählt werden Plätze, nicht Karten: eine Familienkarte ist ein Stück Papier,
 aber vier Leute im Saal.
 
+## Die Türliste
+
+Unter *Tickets* steht neben *Offene neu drucken* der Knopf **Türliste
+drucken**. Darauf steht jede ausgegebene Karte dieses Abends mit Code,
+Kategorie, Preis, Namen und Zustand, und vor jeder Zeile ein Kästchen zum
+Abhaken.
+
+Das ist der Weg für den Fall, dass am Eingang nichts mehr geht: Akku leer,
+Kamera streikt, Netz weg, Handy heruntergefallen. Dann wird von Hand
+abgehakt und der Einlass hinterher in der Kasse nachgetragen — sonst fehlt
+er in der Abrechnung.
+
+Stornierte Karten stehen mit auf dem Blatt, durchgestrichen. Eine Liste, die
+nur die guten Karten zeigt, ließe die stornierte durch, und genau davor soll
+sie schützen.
+
+Die Liste einmal vor dem Abend ausdrucken und an die Kasse legen. Sie zeigt
+den Stand des Augenblicks; wer nach dem Druck noch verkauft, schreibt die
+Nummern unten dazu.
+
+## Aufräumen: löschen und abschließen
+
+Bei mehreren Geräten ist Löschen kein Wegwerfen, sondern eine Nachricht.
+Wirft ein Gerät eine Veranstaltung weg und sagt es den anderen nicht, bringt
+der nächste Abgleich sie zurück — die anderen haben sie ja noch. Die Kasse
+schreibt darum bei jedem Löschen einen Vermerk, der mitreist und auf jedem
+Gerät ausgeführt wird. Was auf einem Gerät weggeräumt wurde, verschwindet
+beim nächsten Abgleich überall, und der Abgleichsbericht sagt, was fortkam.
+
+Wer eine gelöschte Kategorie oder ein gelöschtes Kürzel später wieder
+anlegt, holt es damit absichtlich zurück; auch das reist mit.
+
+**Abschließen** ist der zweite Teil. Neben jeder Veranstaltung unter
+*Einstellungen* steht der Knopf. Er dampft den Abend auf seine Zahlen ein:
+die Kategorienübersicht und die Summen wandern ins **Archiv**, die einzelnen
+Karten fallen fort. Von da an lässt sich für diesen Abend nicht mehr
+verkaufen, und seine Karten gelten am Einlass nicht mehr — er ist vorbei.
+
+Das ist die einzige Stelle, an der der Stand wieder kleiner wird, und er
+muss kleiner werden können: bei jedem Abgleich geht der ganze Stand über das
+Netz. Ein Abend mit zweihundert Karten wiegt rund dreißig Kilobyte, sein
+Archiveintrag knapp ein Kilobyte. Ohne Abschließen wächst der Stand über die
+Jahre monoton, und irgendwann zieht jedes Gerät im Minutentakt die
+Vorjahresabende mit über das Föhrer Mobilfunknetz.
+
+Die Archiveinträge lassen sich einzeln drucken — derselbe Kassenabschluss
+wie am Abend selbst, nur aus dem Gedächtnis. **Vor dem Abschließen** ist der
+richtige Zeitpunkt für eine Sicherung unter *Einstellungen → Sicherung*,
+falls doch noch jemand eine einzelne Karte nachschlagen will.
+
 ## Mehrere Türen
 
 Es können beliebig viele Geräte mitlaufen. Jedes bekommt unter
@@ -367,7 +417,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **2.4** | gezeichnetes Symbol des Vereins auf Schreibtisch und Home-Bildschirm |
+| **2.5** | Löschen hält über Geräte hinweg, Abende abschließen, Türliste zum Abhaken |
+| 2.4 | gezeichnetes Symbol des Vereins auf Schreibtisch und Home-Bildschirm |
 | 2.3 | Druck auf Etiketten- und Thermodrucker |
 | 2.2 | eigenes Symbol, als Programm einrichtbar |
 | 2.1 | Höchstzahlen je Kategorie, eine Übersicht statt dreier |
