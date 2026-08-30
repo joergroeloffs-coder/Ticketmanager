@@ -6,6 +6,19 @@ Abhängigkeiten.
 
 **Im Browser öffnen:** https://joergroeloffs-coder.github.io/Ticketmanager/
 
+## Für den Anfang: die Bedienungsanleitung
+
+Wer die Kasse zum ersten Mal öffnet, nimmt am besten
+**[`Bedienungsanleitung.pdf`](Bedienungsanleitung.pdf)** — sieben Seiten,
+farbig, mit Bildschirmfotos: einrichten, verkaufen, drucken, Einlass, zwei
+Geräte, abrechnen, und eine Tabelle für den Fall, dass etwas klemmt. Zum
+Ausdrucken und Danebenlegen gedacht.
+
+Dieses README ist die vollständige Beschreibung mit allen Einzelheiten; die
+Anleitung ist der Weg hinein. Sie entsteht aus `Bedienungsanleitung.html` —
+eine einzelne Datei mit eingebetteten Bildern, die sich im Browser über
+*Drucken → Als PDF sichern* neu ausgeben lässt.
+
 ## Wie es arbeitet
 
 Jede Karte trägt einen QR-Code aus drei Teilen: dem Kürzel der
@@ -417,7 +430,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **2.5** | Löschen hält über Geräte hinweg, Abende abschließen, Türliste zum Abhaken |
+| **2.6** | Bedienungsanleitung als PDF; Restzahl auf der Kachel wieder lesbar |
+| 2.5 | Löschen hält über Geräte hinweg, Abende abschließen, Türliste zum Abhaken |
 | 2.4 | gezeichnetes Symbol des Vereins auf Schreibtisch und Home-Bildschirm |
 | 2.3 | Druck auf Etiketten- und Thermodrucker |
 | 2.2 | eigenes Symbol, als Programm einrichtbar |

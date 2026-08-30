@@ -194,6 +194,14 @@ label.feld>span,.feldTitel{display:block;font-size:11px;text-transform:uppercase
 .kachel .preis{font-size:15px;opacity:.82;display:flex;justify-content:space-between;
                gap:8px;align-items:baseline}
 .kachel .rest{font-size:13px;opacity:.95;white-space:nowrap}
+/* Steht etwas im Korb, sitzt unten rechts das Minus. Ohne Platz dafür liefe
+   die Restzahl darunter hindurch — "noch 170 von 200" mit einem Kreis auf
+   der 200. Preis und Restzahl rücken dann untereinander; nebeneinander
+   bleibt neben dem Minus zu wenig übrig, und der Preis bräche mitten im
+   Eurozeichen um. */
+.kachel .euro{white-space:nowrap}
+.kachel.imkorb .preis{padding-right:48px;flex-direction:column;
+                      align-items:flex-start;gap:1px}
 .kachel.erschoepft{opacity:.55}
 .kachel.erschoepft .rest{font-weight:600;opacity:1}
 /* Die Zahl steht hell auf dunkel, damit sie sich von der Fläche löst. */
@@ -842,7 +850,7 @@ td.n,th.n{text-align:right}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "2.5";
+var VERSION = "2.6";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
@@ -1554,8 +1562,9 @@ function zeichneKacheln(){
     b.style.border = helligkeit(k.farbe)>0.5 ? "1px solid rgba(16,37,26,.18)" : "0";
     var rest=frei(k,true);
     if(rest===0) b.classList.add("erschoepft");
+    if(q) b.classList.add("imkorb");
     b.innerHTML='<span class="bez">'+esc(k.name)+'</span>'+
-      '<span class="preis">'+eur(k.cent)+' &euro;'+
+      '<span class="preis"><span class="euro">'+eur(k.cent)+' &euro;</span>'+
         (rest===null ? '' :
          '<span class="rest">'+(rest ? "noch "+rest+" von "+k.limit
                                      : "ausverkauft")+'</span>')+'</span>'+
