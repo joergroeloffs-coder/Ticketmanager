@@ -286,6 +286,45 @@ wie am Abend selbst, nur aus dem Gedächtnis. **Vor dem Abschließen** ist der
 richtige Zeitpunkt für eine Sicherung unter *Einstellungen → Sicherung*,
 falls doch noch jemand eine einzelne Karte nachschlagen will.
 
+## Nur Einlass: ein Gerät für die Tür
+
+Bis Fassung 2.6 war jedes Gerät eine vollständige Kasse — auch das, das
+draußen an der Tür stand und nur scannen sollte. Ein Fehlgriff in der
+Ticketliste stornierte dort eine Karte, ein Fehlgriff in den Kategorien
+änderte mitten im Abend einen Preis, und beides fiel erst bei der
+Abrechnung auf.
+
+Unter *Einstellungen → Einlass → Nur Einlass* wird eine vier- bis
+achtstellige Zahl eingetragen und das Gerät gesperrt. Danach bleiben:
+
+- der Einlass mit Kamera, Eingabefeld, Urteil und Ton,
+- die Liste der zuletzt geprüften Karten,
+- der Abgleich samt Statuszeile und einem Knopf *Jetzt abgleichen*,
+- die Wahl der Veranstaltung oben rechts.
+
+Fort sind Verkauf, Druck, Ticketliste, Kassenabschluss und alle
+Einstellungen. Auch die Übernahme eines fremden Zugangs per QR-Code wird
+abgewiesen — das ist eine Einstellung und hat an der Tür nichts zu suchen.
+Aufgehoben wird die Beschränkung mit derselben Zahl, unten auf dem
+Einlassschirm.
+
+Zwei Dinge dazu, ehrlich gesagt:
+
+**Es ist ein Schutzgeländer, kein Schloss.** Alles läuft im Browser dieses
+Geräts. Wer sich auskennt, kommt daran vorbei — über die Entwicklerwerkzeuge
+oder indem er den Browserspeicher löscht. Gegen den Fehlgriff am Eingang
+hilft es vollständig, gegen den entschlossenen Insider gar nicht. Der
+Fehlgriff ist der Fall, den es an der Tür wirklich gibt.
+
+**Die Sperre gehört dem Gerät, nicht dem Abend.** Sie wandert deshalb nicht
+mit dem Abgleich; sonst legte ein gesperrtes Türgerät die Kasse drinnen
+gleich mit still. Jedes Gerät wird für sich gesperrt.
+
+Wer die Zahl vergisst, kommt nur noch über *Browserdaten löschen* an das
+Gerät — und damit wäre auch sein Stand fort. Ist eine Ablage eingerichtet,
+holt sich das Gerät danach alles von selbst zurück; ohne Ablage ist der
+Stand dieses Geräts verloren. Also aufschreiben.
+
 ## Mehrere Türen
 
 Es können beliebig viele Geräte mitlaufen. Jedes bekommt unter
@@ -430,7 +469,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **2.6** | Bedienungsanleitung als PDF; Restzahl auf der Kachel wieder lesbar |
+| **2.7** | Geräte an der Tür lassen sich auf reinen Einlass beschränken |
+| 2.6 | Bedienungsanleitung als PDF; Restzahl auf der Kachel wieder lesbar |
 | 2.5 | Löschen hält über Geräte hinweg, Abende abschließen, Türliste zum Abhaken |
 | 2.4 | gezeichnetes Symbol des Vereins auf Schreibtisch und Home-Bildschirm |
 | 2.3 | Druck auf Etiketten- und Thermodrucker |

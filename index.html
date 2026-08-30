@@ -403,6 +403,17 @@ td.n,th.n{text-align:right}
 }
 .etikett.raster .mass{font-size:7pt}
 
+/* Ist das Gerät auf Einlass beschränkt, bleiben von der Leiste nur der
+   Einlass und der Hinweis darauf. */
+body.nurEinlass nav button:not([data-reiter="einlass"]){display:none}
+/* Der einzige verbliebene Reiter soll nicht über die ganze Breite laufen —
+   das sähe aus wie ein Knopf, der etwas tut. */
+body.nurEinlass nav button[data-reiter="einlass"]{flex:0 0 auto;padding-left:30px;padding-right:30px}
+.nurMarke{display:none;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--goldKante);border:1px solid var(--goldKante);border-radius:99px;
+  padding:2px 10px;margin-left:12px;align-self:center;white-space:nowrap}
+body.nurEinlass .nurMarke{display:inline-block}
+
 @media print{
   header,main,#meldung{display:none !important}
   body{background:#fff}
@@ -430,6 +441,7 @@ td.n,th.n{text-align:right}
     <button data-reiter="einlass">Einlass</button>
     <button data-reiter="tickets">Tickets</button>
     <button data-reiter="einstellungen">Einstellungen</button>
+    <span class="nurMarke">Nur Einlass</span>
   </nav>
 </header>
 
@@ -512,6 +524,25 @@ td.n,th.n{text-align:right}
   <div class="karte">
     <div class="titel"><h2>Zuletzt geprüft</h2></div>
     <div class="inhalt"><div id="pruefLog" class="muted">Noch keine Prüfungen.</div></div>
+  </div>
+
+  <div class="karte hide" id="sperrKasten">
+    <div class="titel">
+      <h2>Abgleich</h2>
+      <button class="knopf klein" id="btnTuerAbgleich">Jetzt abgleichen</button>
+    </div>
+    <div class="inhalt">
+      <div id="tuerStand" class="muted">Keine Ablage eingetragen.</div>
+      <p class="muted" style="margin:10px 0 0">
+        Dieses Gerät ist auf Einlass beschränkt. Eine Karte, die drinnen eben
+        verkauft wurde, ist hier bekannt, sobald sie angekommen ist — bis
+        dahin wird sie eingelassen und nachgetragen.
+      </p>
+      <div class="reihe" style="margin-top:12px">
+        <button class="knopf klein" id="btnTuerTon">Ton</button>
+        <button class="knopf klein" id="btnEntsperren">Beschränkung aufheben</button>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -660,6 +691,29 @@ td.n,th.n{text-align:right}
         <button class="knopf" id="btnKassenzeichen">Kassenzeichen speichern</button>
       </div>
       <div id="kzFehler" class="hinweis hide"></div>
+
+      <div class="feldTitel" style="margin-top:16px">Nur Einlass</div>
+      <p class="muted" style="margin:0 0 10px">
+        Für Geräte, die an der Tür stehen: danach lässt sich hier nur noch
+        scannen und abgleichen. Verkauf, Ticketliste und Einstellungen sind
+        fort. Ein Fehlgriff in der Liste kann dann keine Karte mehr
+        stornieren und keinen Preis mehr ändern.
+      </p>
+      <div class="reihe">
+        <input id="sperrZahl" class="mono" inputmode="numeric" maxlength="8"
+               placeholder="4711" style="width:110px;text-align:center">
+        <span class="muted grow">Vier bis acht Ziffern. Nur mit dieser Zahl
+          lässt sich die Beschränkung wieder aufheben — <b>aufschreiben</b>.</span>
+      </div>
+      <div class="reihe" style="margin-top:10px">
+        <button class="knopf" id="btnSperren">Gerät sperren</button>
+      </div>
+      <div id="sperrFehler" class="hinweis hide"></div>
+      <p class="muted" style="margin:10px 0 0">
+        Das ist ein Schutzgeländer, kein Schloss: alles läuft im Browser
+        dieses Geräts, und wer sich auskennt, kommt daran vorbei. Gegen den
+        Fehlgriff am Eingang hilft es vollständig.
+      </p>
     </div>
   </div>
 
@@ -850,7 +904,7 @@ td.n,th.n{text-align:right}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "2.6";
+var VERSION = "2.7";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
@@ -1181,6 +1235,11 @@ function leereDaten(){
        der Inhalt, wie weit das Papier vorgeschoben wird. */
     rolle:{breite:62, hoehe:29, rand:2},
     ablage:{adresse:"", wort:"", intervall:0},
+    /* Ein Gerät an der Tür soll einlassen und sonst nichts. Die Sperre
+       gehört dem Gerät, nicht dem Abend — sie wandert deshalb nicht mit dem
+       Abgleich, sonst legte ein gesperrtes Türgerät die Kasse drinnen still.
+       Gespeichert wird nicht die Zahl, sondern ihr Abdruck. */
+    sperre:{an:false, wort:""},
   };
 }
 
@@ -1256,6 +1315,8 @@ function migriere(d){
     neu.ablage={adresse:String(d.ablage.adresse||""), wort:String(d.ablage.wort||""),
                 intervall:Number(d.ablage.intervall)||0};
   }
+  if(d.sperre&&typeof d.sperre==="object")
+    neu.sperre={an:!!d.sperre.an, wort:String(d.sperre.wort||"")};
   neu.kassenzeichen = /^[A-Z]$/.test(String(d.kassenzeichen||"").toUpperCase())
                     ? String(d.kassenzeichen).toUpperCase() : "";
 
@@ -2138,6 +2199,16 @@ function zugangLesen(roh){
   var adresse=(zeilen[1]||"").trim(), wort=(zeilen[2]||"").trim();
   if(!adresse) return false;
   var feld=$("befund");
+  /* Auch das ist eine Einstellung, und zwar eine schwerwiegende: sie
+     hängt das Gerät an eine andere Ablage. An der Tür hat das nichts zu
+     suchen — dort wird gescannt. */
+  if(gesperrt()){
+    feld.className="befund b-nein";
+    feld.textContent="Dieses Gerät ist auf Einlass beschränkt. Der Zugang lässt "+
+                     "sich hier nicht ändern.";
+    klingen(false);
+    return true;
+  }
   if(!confirm("Zugang zur Ablage von einem anderen Gerät übernehmen?\n\n"+
               adresse+"\n\nDie eigenen Angaben werden dabei ersetzt.")){
     feld.className="befund b-still";
@@ -2733,6 +2804,7 @@ function etwasGebracht(b){
 }
 
 function zeichneWolke(){
+  zeichneTuerStand();
   var an=wolkeBereit();
   $("wolkeStand").textContent = wolkeStandText ||
     (an ? "Noch nicht abgeglichen." : "Keine Ablage eingetragen.");
@@ -2741,7 +2813,7 @@ function zeichneWolke(){
     $("wolkeIntervall").value = String((db.ablage&&db.ablage.intervall)||0);
 }
 
-function wolkeSagen(text){ wolkeStandText=text; zeichneWolke(); }
+function wolkeSagen(text){ wolkeStandText=text; zeichneWolke(); zeichneTuerStand(); }
 
 /* Absichtlich text/plain: bei jedem anderen Inhaltstyp schickt der Browser
    vorab eine Anfrage, die Apps Script nicht beantwortet — der Aufruf bräche
@@ -2844,6 +2916,7 @@ function wolkePaket(){
   for(var f in db) if(Object.prototype.hasOwnProperty.call(db,f)) k[f]=db[f];
   delete k.ablage;
   delete k.kassenzeichen;
+  delete k.sperre;
   return k;
 }
 
@@ -3219,8 +3292,95 @@ function allesZeichnen(){
   zeichneListe(); zeichneZahlen(); zeichneAbschluss();
 }
 
+/* ========================= Nur-Einlass-Betrieb =========================
+
+   Bis hierher war jedes Gerät eine vollständige Kasse. An der Tür ist das
+   zu viel: dort soll gescannt werden, sonst nichts. Ein Fehlgriff in der
+   Ticketliste storniert eine Karte, ein Fehlgriff in den Kategorien ändert
+   mitten im Abend einen Preis, und beides fällt erst bei der Abrechnung auf.
+
+   Die Sperre nimmt dem Gerät alles außer dem Einlass. Sie ist ein
+   Schutzgeländer, kein Schloss: alles läuft im Browser auf diesem Gerät,
+   und wer sich auskennt, kommt daran vorbei. Gegen den Fehlgriff hilft sie
+   vollständig, gegen den entschlossenen Insider gar nicht — und der
+   Fehlgriff ist der Fall, den es an der Tür wirklich gibt.
+
+   Der Abgleich läuft weiter, sonst wüsste die Tür nichts von dem, was
+   drinnen verkauft wird. */
+
+function gesperrt(){ return !!(db.sperre && db.sperre.an); }
+
+/* Nicht die Zahl selbst, sondern ihr Abdruck. Wer den Speicher des Browsers
+   aufmacht, soll sie nicht einfach ablesen können. */
+function sperrWort(zahl){ return hmac(String(zahl||""), "sperre"); }
+
+/* Vor jeder Änderung. Die Reiter sind zwar verborgen, aber verborgen ist
+   nicht dasselbe wie gesperrt — ein Knopf, den niemand sieht, lässt sich
+   trotzdem auslösen. */
+function darfAendern(){
+  if(!gesperrt()) return true;
+  melden("Dieses Gerät ist auf Einlass beschränkt");
+  return false;
+}
+
+function sperreAnwenden(){
+  document.body.classList.toggle("nurEinlass", gesperrt());
+  if(gesperrt()) reiterZeigen("einlass");
+  var kasten=$("sperrKasten");
+  if(kasten) kasten.classList.toggle("hide", !gesperrt());
+  var knopf=$("btnSperren");
+  if(knopf) knopf.textContent = gesperrt() ? "Sperre aufheben" : "Gerät sperren";
+  zeichneTuerStand();
+}
+
+/* An der Tür muss zu sehen sein, ob der Abgleich läuft: eine Karte, die
+   drinnen gerade verkauft wurde, ist hier erst bekannt, wenn sie angekommen
+   ist. Darum steht der Stand auf dem Einlassschirm und nicht nur in den
+   Einstellungen, die von hier aus niemand erreicht. */
+function zeichneTuerStand(){
+  var feld=$("tuerStand"); if(!feld) return;
+  feld.textContent = wolkeStandText ||
+    (wolkeBereit() ? "Noch nicht abgeglichen." : "Keine Ablage eingetragen.");
+  var k=$("btnTuerAbgleich");
+  if(k) k.disabled = !wolkeBereit() || wolkeLaeuft;
+  /* Der Ton ist das Einzige, was an der Tür sonst noch umzustellen ist —
+     im Saal während der Rede will ihn niemand hören. */
+  var t=$("btnTuerTon");
+  if(t) t.textContent = db.ton ? "Ton an" : "Ton aus";
+}
+
+function sperreSetzen(){
+  if(gesperrt()){
+    var eingabe=prompt("Zahl eingeben, um die Sperre aufzuheben:");
+    if(eingabe===null) return;
+    if(sperrWort(eingabe)!==db.sperre.wort){ melden("Die Zahl stimmt nicht"); return; }
+    db.sperre={an:false, wort:""};
+    sichern(); sperreAnwenden(); melden("Sperre aufgehoben");
+    return;
+  }
+  var zahl=$("sperrZahl").value.trim();
+  var f=$("sperrFehler");
+  if(!/^[0-9]{4,8}$/.test(zahl)){
+    f.textContent="Vier bis acht Ziffern werden gebraucht.";
+    f.classList.remove("hide"); return;
+  }
+  f.classList.add("hide");
+  if(!confirm("Dieses Gerät auf Einlass beschränken?\n\n"+
+              "Danach lässt sich hier nur noch scannen und abgleichen. "+
+              "Verkauf, Ticketliste und Einstellungen sind fort, bis die Zahl "+
+              zahl+" wieder eingegeben wird.\n\n"+
+              "Schreiben Sie die Zahl auf. Ohne sie hilft nur noch, den "+
+              "Browserspeicher zu löschen — und damit wäre der Stand dieses "+
+              "Geräts weg."))
+    return;
+  db.sperre={an:true, wort:sperrWort(zahl)};
+  $("sperrZahl").value="";
+  sichern(); sperreAnwenden(); melden("Gerät auf Einlass beschränkt");
+}
+
 /* ============================ Verdrahtung ============================ */
 function reiterZeigen(name){
+  if(gesperrt() && name!=="einlass") name="einlass";
   ["kasse","einlass","tickets","einstellungen"].forEach(function(r){
     $("reiter-"+r).classList.toggle("hide", r!==name);
   });
@@ -3252,6 +3412,7 @@ function start(){
   katFormular(null);
   evFormular(null);
   zeichnePruefLog();
+  sperreAnwenden();
   wolkeUhrStellen();
   /* Beim Öffnen einmal holen: das Gerät soll nicht mit einem Stand von
      gestern in den Abend gehen. */
@@ -3279,7 +3440,9 @@ function start(){
     if(!l) return;
     db.layout=l; sichern(); zeichneLayoutWahl();
   });
-  $("btnDrucken").addEventListener("click",ticketsErzeugen);
+  $("btnDrucken").addEventListener("click",function(){
+    if(darfAendern()) ticketsErzeugen();
+  });
 
   /* ---- Einlass ---- */
   $("btnPruefen").addEventListener("click",function(){
@@ -3296,6 +3459,7 @@ function start(){
   $("ticketListe").addEventListener("click",function(e){
     var v=e.target.getAttribute&&e.target.getAttribute("data-storno");
     if(!v) return;
+    if(!darfAendern()) return;
     var teile=v.split("|"), evId=teile[0], nummer=teile[1];
     var karte=null;
     for(var i=0;i<db.tickets.length;i++){
@@ -3317,6 +3481,7 @@ function start(){
     wolkeVormerken(); melden("Karte storniert");
   });
   $("btnSchliessen").addEventListener("click",function(){
+    if(!darfAendern()) return;
     var ev=aktivesEvent(); if(!ev) return;
     if(db.geschlossen[ev.id]){
       if(!confirm("Kasse für „"+ev.name+"“ wieder öffnen? Danach kann weiter "+
@@ -3337,12 +3502,20 @@ function start(){
 
   $("btnAbschlussDrucken").addEventListener("click",abschlussDrucken);
   $("btnTuerliste").addEventListener("click",tuerlisteDrucken);
+  $("btnSperren").addEventListener("click",sperreSetzen);
+  $("btnEntsperren").addEventListener("click",sperreSetzen);
+  $("btnTuerAbgleich").addEventListener("click",function(){ wolkeAbgleichen(); });
+  $("btnTuerTon").addEventListener("click",function(){
+    db.ton=!db.ton; sichern(); zeichneTonWahl(); zeichneTuerStand();
+    melden(db.ton ? "Ton an" : "Ton aus");
+  });
   $("archivListe").addEventListener("click",function(e){
     var k=e.target.getAttribute&&e.target.getAttribute("data-archivdruck");
     if(k) archivDrucken(k);
   });
 
   $("btnNachdruck").addEventListener("click",function(){
+    if(!darfAendern()) return;
     var ev=aktivesEvent();
     if(!ev){ melden("Keine Veranstaltung aktiv"); return; }
     var offen=db.tickets.filter(function(t){ return t.evId===ev.id && t.status==="offen"; });
@@ -3352,6 +3525,7 @@ function start(){
 
   /* ---- Veranstaltungen ---- */
   $("btnEvNeu").addEventListener("click",function(){
+    if(!darfAendern()) return;
     var name=$("evName").value.trim(), datum=$("evDatum").value,
         kuerzel=$("evKuerzel").value.trim().toUpperCase(), ort=$("evOrt").value.trim();
     var f=$("evFehler");
@@ -3396,6 +3570,7 @@ function start(){
   });
 
   $("evListe").addEventListener("click",function(e){
+    if(!darfAendern()) return;
     var an=e.target.getAttribute&&e.target.getAttribute("data-aktiv");
     var weg=e.target.getAttribute&&e.target.getAttribute("data-evweg");
     var archiv=e.target.getAttribute&&e.target.getAttribute("data-evarchiv");
@@ -3437,6 +3612,7 @@ function start(){
 
   /* ---- Kategorien ---- */
   $("btnKatNeu").addEventListener("click",function(){
+    if(!darfAendern()) return;
     var name=$("katName").value.trim(), c=centAus($("katPreis").value);
     var f=$("katFehler");
     if(!name || !Number.isFinite(c) || c<0){
@@ -3490,6 +3666,7 @@ function start(){
   });
 
   $("katListe").addEventListener("click",function(e){
+    if(!darfAendern()) return;
     var z=e.target,
         hoch=z.getAttribute&&z.getAttribute("data-hoch"),
         runter=z.getAttribute&&z.getAttribute("data-runter"),
@@ -3529,6 +3706,7 @@ function start(){
                          : "Nur gespeicherte Karten werden eingelassen");
   });
   $("btnKassenzeichen").addEventListener("click",function(){
+    if(!darfAendern()) return;
     var v=$("kassenzeichen").value.trim().toUpperCase(), f=$("kzFehler");
     if(v && !/^[A-Z]$/.test(v)){
       f.textContent="Das Kassenzeichen ist ein einzelner Buchstabe von A bis Z, oder leer.";
@@ -3540,6 +3718,7 @@ function start(){
   });
 
   $("btnVeranstalter").addEventListener("click",function(){
+    if(!darfAendern()) return;
     db.veranstalter={name:$("vName").value.trim(), zusatz:$("vZusatz").value.trim()};
     sichern(); melden("Veranstalter gespeichert");
   });
@@ -3610,6 +3789,7 @@ function start(){
 
   /* ---- Ablage ---- */
   $("btnWolkeSpeichern").addEventListener("click",function(){
+    if(!darfAendern()) return;
     var a=$("wolkeAdresse").value.trim();
     /* Von einer https-Seite lässt der Browser unverschlüsselte Aufrufe nicht
        durch — außer zum eigenen Rechner, den er als vertrauenswürdig ansieht.
@@ -3716,6 +3896,7 @@ function start(){
 
   /* ---- Schlüssel ---- */
   $("btnSchluessel").addEventListener("click",function(){
+    if(!darfAendern()) return;
     var v=$("schluessel").value.trim();
     if(v.length<8){ alert("Der Schlüssel sollte mindestens acht Zeichen haben."); return; }
     if(v===db.schluessel){ melden("Der Schlüssel ist unverändert"); return; }
@@ -3726,6 +3907,7 @@ function start(){
 
   /* ---- Zurücksetzen ---- */
   $("btnLoeschen").addEventListener("click",function(){
+    if(!darfAendern()) return;
     if(!confirm("Wirklich alle Veranstaltungen, Kategorien und Tickets löschen?")) return;
     var v=db.veranstalter;
     db=leereDaten(); db.veranstalter=v;
