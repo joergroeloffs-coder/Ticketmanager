@@ -403,16 +403,83 @@ td.n,th.n{text-align:right}
 }
 .etikett.raster .mass{font-size:7pt}
 
-/* Ist das Gerät auf Einlass beschränkt, bleiben von der Leiste nur der
-   Einlass und der Hinweis darauf. */
-body.nurEinlass nav button:not([data-reiter="einlass"]){display:none}
-/* Der einzige verbliebene Reiter soll nicht über die ganze Breite laufen —
-   das sähe aus wie ein Knopf, der etwas tut. */
-body.nurEinlass nav button[data-reiter="einlass"]{flex:0 0 auto;padding-left:30px;padding-right:30px}
-.nurMarke{display:none;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--goldKante);border:1px solid var(--goldKante);border-radius:99px;
-  padding:2px 10px;margin-left:12px;align-self:center;white-space:nowrap}
-body.nurEinlass .nurMarke{display:inline-block}
+/* ---------------------- Der Türschirm ----------------------
+
+   An der Tür steht ein Handy, oft ein kleines. Dort zählt dreierlei: welcher
+   Abend geprüft wird, ob es grün oder rot leuchtet, und warum. Alles andere
+   ist Beiwerk und darf keinen Platz kosten — was erst nach dem Scrollen
+   sichtbar wird, sieht in einer Schlange niemand.
+
+   Der ganze Schirm ist deshalb eine Spalte über die volle Fensterhöhe, ohne
+   Rollbalken: schmaler Kopf, kleines Kamerabild, das Urteil so groß wie der
+   Rest hergibt, darunter eine Zeile für Eingabe und Knöpfe. Die Karten des
+   gewöhnlichen Bildschirms werden dafür flach gemacht — Rahmen, Schatten und
+   Überschriften fallen weg. */
+.tuerZeile{display:none}
+
+body.nurEinlass{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+body.nurEinlass header{flex:0 0 auto;border-bottom-width:1px}
+body.nurEinlass .kopfzeile{padding:7px 12px;align-items:center;gap:8px;flex-wrap:nowrap}
+body.nurEinlass .marke,
+body.nurEinlass .anlassZusatz,
+body.nurEinlass .kopfFeldGruppe label,
+body.nurEinlass nav{display:none}
+body.nurEinlass .anlassName{font-size:19px;line-height:1.15;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.nurEinlass .tuerZeile{display:block;font-size:11px;color:var(--kopfWeich);
+  letter-spacing:.09em;text-transform:uppercase;margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.nurEinlass .kopfFeld{padding:5px 8px;font-size:13px;max-width:42vw}
+
+body.nurEinlass main{flex:1 1 auto;min-height:0;max-width:none;
+  padding:8px 10px;display:flex;flex-direction:column}
+body.nurEinlass #reiter-einlass{flex:1 1 auto;min-height:0;
+  display:flex;flex-direction:column;gap:8px}
+
+/* Die Karte mit dem Prüffeld trägt den Schirm, die anderen verschwinden. */
+body.nurEinlass #reiter-einlass > .karte{margin:0;border:0;box-shadow:none;background:none}
+body.nurEinlass #reiter-einlass > .karte:first-child{flex:1 1 auto;min-height:0;display:flex}
+body.nurEinlass #reiter-einlass > .karte:first-child > .titel{display:none}
+body.nurEinlass #reiter-einlass > .karte:first-child > .inhalt{
+  flex:1 1 auto;min-height:0;padding:0;display:flex;flex-direction:column;gap:8px}
+body.nurEinlass #reiter-einlass > .karte:nth-child(2){display:none}
+
+/* Reihenfolge: Bild, Urteil, Eingabe. Auf dem Schirm steht das Urteil damit
+   dort, wohin der Blick nach dem Scannen ohnehin fällt. */
+body.nurEinlass #video{order:1;flex:0 1 auto;width:100%;max-height:26dvh;
+  object-fit:cover;border-radius:var(--radius);margin:0}
+body.nurEinlass #kameraHinweis{order:2;margin:0;font-size:12px;padding:8px 10px}
+body.nurEinlass #befund{order:3;flex:1 1 auto;min-height:74px;margin:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:10px 14px;line-height:1.05;
+  font-size:clamp(26px,8vw,44px)}
+body.nurEinlass #befund .dazu{font-size:clamp(13px,3.6vw,17px);line-height:1.3;
+  margin-top:8px;opacity:.92;max-width:34ch}
+/* Voll durchgefärbt statt zart getönt: das muss aus einem Meter Abstand und
+   im halbdunklen Saal zu erkennen sein. */
+body.nurEinlass #befund.b-ja{background:var(--watt);color:#fff;border-color:var(--watt)}
+body.nurEinlass #befund.b-nein{background:var(--ziegel);color:#fff;border-color:var(--ziegel)}
+@keyframes aufleuchten{from{filter:brightness(1.85)}to{filter:brightness(1)}}
+body.nurEinlass #befund.leuchtet{animation:aufleuchten .45s ease-out}
+
+/* Eingabefeld und die beiden Knöpfe teilen sich eine Zeile. */
+body.nurEinlass .eingabe{order:4;flex:0 0 auto;display:flex;gap:6px;align-items:stretch}
+body.nurEinlass .eingabe #scanFeld{flex:1 1 auto;min-width:0;padding:8px 10px;font-size:14px}
+body.nurEinlass .eingabe .reihe{margin:0 !important;flex:0 0 auto;gap:6px}
+body.nurEinlass .eingabe .knopf{padding:8px 12px;font-size:14px;flex:0 0 auto}
+
+/* Ganz unten eine schmale Leiste: Stand des Abgleichs und drei kleine Knöpfe. */
+body.nurEinlass #sperrKasten{flex:0 0 auto;margin:0;border:0;box-shadow:none;background:none}
+body.nurEinlass #sperrKasten > .titel{padding:0;border:0;min-height:0}
+body.nurEinlass #sperrKasten > .titel h2{display:none}
+body.nurEinlass #sperrKasten > .inhalt{padding:0;display:flex;flex-direction:column;gap:4px}
+body.nurEinlass #sperrKasten p{display:none}
+body.nurEinlass #tuerStand{font-size:11px;line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.nurEinlass #tuerKnoepfe{margin:0 !important;gap:6px}
+body.nurEinlass #tuerKnoepfe .knopf{padding:7px 10px;font-size:12px}
+body.nurEinlass #btnEntsperren{margin-left:auto}
+
 
 @media print{
   header,main,#meldung{display:none !important}
@@ -430,6 +497,7 @@ body.nurEinlass .nurMarke{display:inline-block}
       <div class="marke">Fering Vereinsmanager · Ticketkasse<span class="version" id="version"></span></div>
       <div class="anlassName" id="kopfAnlass">Kein Event</div>
       <div class="anlassZusatz" id="kopfZusatz"></div>
+      <div class="tuerZeile" id="tuerZeile"></div>
     </div>
     <div class="kopfFeldGruppe">
       <label for="evSel">Veranstaltung</label>
@@ -441,7 +509,6 @@ body.nurEinlass .nurMarke{display:inline-block}
     <button data-reiter="einlass">Einlass</button>
     <button data-reiter="tickets">Tickets</button>
     <button data-reiter="einstellungen">Einstellungen</button>
-    <span class="nurMarke">Nur Einlass</span>
   </nav>
 </header>
 
@@ -508,11 +575,13 @@ body.nurEinlass .nurMarke{display:inline-block}
   <div class="karte">
     <div class="titel"><h2>Code prüfen</h2></div>
     <div class="inhalt">
-      <input id="scanFeld" class="mono" placeholder="Code eintippen oder scannen"
-             autocomplete="off" autocapitalize="off" spellcheck="false">
-      <div class="reihe" style="margin-top:10px">
-        <button class="knopf voll grow" id="btnPruefen">Prüfen</button>
-        <button class="knopf grow" id="btnKamera">Kamera</button>
+      <div class="eingabe">
+        <input id="scanFeld" class="mono" placeholder="Code eintippen oder scannen"
+               autocomplete="off" autocapitalize="off" spellcheck="false">
+        <div class="reihe" style="margin-top:10px">
+          <button class="knopf voll grow" id="btnPruefen">Prüfen</button>
+          <button class="knopf grow" id="btnKamera">Kamera</button>
+        </div>
       </div>
       <video id="video" playsinline muted class="hide" style="margin-top:10px"></video>
       <canvas id="lesefeld" class="hide"></canvas>
@@ -527,10 +596,7 @@ body.nurEinlass .nurMarke{display:inline-block}
   </div>
 
   <div class="karte hide" id="sperrKasten">
-    <div class="titel">
-      <h2>Abgleich</h2>
-      <button class="knopf klein" id="btnTuerAbgleich">Jetzt abgleichen</button>
-    </div>
+    <div class="titel"><h2>Abgleich</h2></div>
     <div class="inhalt">
       <div id="tuerStand" class="muted">Keine Ablage eingetragen.</div>
       <p class="muted" style="margin:10px 0 0">
@@ -538,9 +604,10 @@ body.nurEinlass .nurMarke{display:inline-block}
         verkauft wurde, ist hier bekannt, sobald sie angekommen ist — bis
         dahin wird sie eingelassen und nachgetragen.
       </p>
-      <div class="reihe" style="margin-top:12px">
+      <div class="reihe" id="tuerKnoepfe" style="margin-top:12px">
+        <button class="knopf klein" id="btnTuerAbgleich">Abgleich</button>
         <button class="knopf klein" id="btnTuerTon">Ton</button>
-        <button class="knopf klein" id="btnEntsperren">Beschränkung aufheben</button>
+        <button class="knopf klein" id="btnEntsperren">Sperre lösen</button>
       </div>
     </div>
   </div>
@@ -904,7 +971,7 @@ body.nurEinlass .nurMarke{display:inline-block}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "2.7";
+var VERSION = "2.8";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
@@ -2234,6 +2301,11 @@ function pruefe(roh){
   function befund(art,titel,dazu){
     feld.className="befund "+art;
     feld.innerHTML=esc(titel)+(dazu?'<div class="dazu">'+esc(dazu)+'</div>':"");
+    /* Zweimal dasselbe Urteil hintereinander sähe sonst aus, als sei nichts
+       geschehen. Ein kurzes Aufhellen sagt: gelesen. Der Neustart der
+       Bildfolge braucht den erzwungenen Umbruch dazwischen. */
+    feld.classList.remove("leuchtet"); void feld.offsetWidth;
+    feld.classList.add("leuchtet");
     var gut=(art==="b-ja");
     klingen(gut);
     pruefungen.unshift({zeit:Date.now(), code:code, gut:gut, text:titel});
@@ -2248,6 +2320,27 @@ function pruefe(roh){
   var ev=eventNachKuerzel(teile[0]);
   if(!ev){ befund("b-nein","Fremde Veranstaltung",
                   "Das Kürzel "+teile[0]+" gehört zu keiner Veranstaltung dieser Kasse."); return; }
+
+  /* Geprüft wird gegen den Abend, der oben eingestellt ist — nicht gegen
+     irgendeinen, den dieses Gerät kennt.
+
+     Vorher wurde jede Veranstaltung genommen, zu der das Kürzel passte. Eine
+     Karte vom Grünkohlessen fand dann ihre eigene Veranstaltung, ihre eigene
+     gültige Signatur und ihren eigenen Eintrag — und weil sie damals
+     eingelassen worden war, stand am Sommerfest "Bereits eingelöst". Das
+     liest sich an der Tür wie "dieser Gast war heute schon da" und ist etwas
+     ganz anderes. */
+  var jetzt=aktivesEvent();
+  if(!jetzt){
+    befund("b-nein","Keine Veranstaltung gewählt",
+           "Die Karte gehört zu "+ev.name+". Oben den Abend einstellen."); return;
+  }
+  if(ev.id!==jetzt.id){
+    befund("b-nein","Andere Veranstaltung",
+           "Das ist eine Karte für "+ev.name+
+           (ev.datum?" ("+datumKurz(ev.datum)+")":"")+
+           ", geprüft wird "+jetzt.name+"."); return;
+  }
   if(signatur(ev.kuerzel,teile[1])!==teile[2].toLowerCase()){
     befund("b-nein","Gefälscht","Die Signatur stimmt nicht."); return;
   }
@@ -3337,7 +3430,19 @@ function sperreAnwenden(){
    drinnen gerade verkauft wurde, ist hier erst bekannt, wenn sie angekommen
    ist. Darum steht der Stand auf dem Einlassschirm und nicht nur in den
    Einstellungen, die von hier aus niemand erreicht. */
+/* Im Kopf steht am Türschirm nur, was dort gebraucht wird: das Kürzel, an
+   dem sich die Karten erkennen lassen, und der Buchstabe dieses Geräts. Die
+   Fassung dazu — bei einer Unstimmigkeit ist sie die erste Frage. */
+function zeichneTuerZeile(){
+  var zeile=$("tuerZeile"); if(!zeile) return;
+  var ev=aktivesEvent();
+  zeile.textContent=[ev?ev.kuerzel:"kein Abend",
+                     db.kassenzeichen?"Gerät "+db.kassenzeichen:"ohne Zeichen",
+                     VERSION].join(" · ");
+}
+
 function zeichneTuerStand(){
+  zeichneTuerZeile();
   var feld=$("tuerStand"); if(!feld) return;
   feld.textContent = wolkeStandText ||
     (wolkeBereit() ? "Noch nicht abgeglichen." : "Keine Ablage eingetragen.");

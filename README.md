@@ -85,6 +85,29 @@ aus — das untersagen alle Browser, und daran lässt sich nichts drehen.
 Verkauf, Druck und das Eintippen des Codes funktionieren dort trotzdem
 vollständig. Für den Einlass ist die Adresse oben der richtige Weg.
 
+### Was die Kasse antworten kann
+
+Geprüft wird immer gegen den Abend, der oben eingestellt ist — nicht gegen
+irgendeinen, den das Gerät noch kennt.
+
+| Antwort | Was sie heißt |
+| --- | --- |
+| **Gültig** | Echt, zu diesem Abend, noch nicht da. Eingelassen und vermerkt. |
+| **Gültig · nachgetragen** | Echt, aber auf diesem Gerät nicht verkauft — drinnen frisch gekauft. Eingelassen, Preis klärt sich beim Abgleich. |
+| **Bereits eingelöst** | Diese Karte war heute schon hier; daneben steht wann. |
+| **Andere Veranstaltung** | Echte Karte, aber für einen anderen Abend dieser Kasse — meist vom Vorjahr. Es steht dabei, für welchen. |
+| **Fremde Veranstaltung** | Das Kürzel gehört zu gar keinem Abend dieser Kasse. |
+| **Gefälscht** | Die Signatur stimmt nicht; der Code stammt nicht aus dieser Kasse. |
+| **Storniert** | Die Karte wurde zurückgenommen. |
+| **Nicht gefunden** | Nur wenn das Nachtragen abgeschaltet ist. |
+
+*Andere Veranstaltung* gibt es seit Fassung 2.8. Vorher nahm die Kasse jede
+Veranstaltung, zu der das Kürzel passte: eine Karte vom Grünkohlessen fand
+dort ihre eigene Signatur und ihren eigenen Eintrag, und weil sie damals
+eingelassen worden war, stand am Sommerfest *Bereits eingelöst*. An der Tür
+liest sich das wie „dieser Gast war heute schon da" — und das ist etwas ganz
+anderes.
+
 ## Eine Karte für mehrere Plätze
 
 An der Kasse steht unter *Codes* die Wahl: **je Platz ein Code** oder **ein
@@ -295,7 +318,8 @@ Ticketliste stornierte dort eine Karte, ein Fehlgriff in den Kategorien
 Abrechnung auf.
 
 Unter *Einstellungen → Einlass → Nur Einlass* wird eine vier- bis
-achtstellige Zahl eingetragen und das Gerät gesperrt. Danach bleiben:
+achtstellige Zahl eingetragen und das Gerät gesperrt. Der Bildschirm wird
+dabei ein anderer — siehe *Der Türschirm* weiter unten. Es bleiben:
 
 - der Einlass mit Kamera, Eingabefeld, Urteil und Ton,
 - die Liste der zuletzt geprüften Karten,
@@ -324,6 +348,30 @@ Wer die Zahl vergisst, kommt nur noch über *Browserdaten löschen* an das
 Gerät — und damit wäre auch sein Stand fort. Ist eine Ablage eingerichtet,
 holt sich das Gerät danach alles von selbst zurück; ohne Ablage ist der
 Stand dieses Geräts verloren. Also aufschreiben.
+
+### Der Türschirm
+
+Ein gesperrtes Gerät zeigt nicht mehr die gewöhnliche Kasse in klein,
+sondern einen eigenen Bildschirm über die volle Fensterhöhe, ohne
+Rollbalken. An der Tür steht ein Handy, oft ein kleines, und was erst nach
+dem Scrollen sichtbar wird, sieht in einer Schlange niemand.
+
+Von oben nach unten:
+
+1. eine schmale Kopfzeile mit dem Namen des Abends, darunter Kürzel, Gerät
+   und Fassung, daneben die Auswahl der Veranstaltung,
+2. das Kamerabild, klein gehalten,
+3. **das Urteil, so groß wie der Rest hergibt** — voll durchgefärbt in Grün
+   oder Ziegelrot, mit dem Grund darunter,
+4. eine Zeile mit Eingabefeld, *Prüfen* und *Kamera*,
+5. ganz unten der Stand des Abgleichs und drei kleine Knöpfe.
+
+Das Urteil hellt bei jeder Prüfung kurz auf. Zweimal dasselbe Urteil
+hintereinander sähe sonst aus, als sei nichts geschehen.
+
+Gemessen auf 360 × 640 (kleines Android), 375 × 667 (iPhone SE), 375 × 812
+und 393 × 852: alles passt ohne Rollen, das Urteil nimmt zwischen 250 und
+450 Punkte ein.
 
 ## Mehrere Türen
 
@@ -469,7 +517,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **2.7** | Geräte an der Tür lassen sich auf reinen Einlass beschränken |
+| **2.8** | eigener Türschirm fürs Einlasshandy; Karten anderer Abende richtig erkannt |
+| 2.7 | Geräte an der Tür lassen sich auf reinen Einlass beschränken |
 | 2.6 | Bedienungsanleitung als PDF; Restzahl auf der Kachel wieder lesbar |
 | 2.5 | Löschen hält über Geräte hinweg, Abende abschließen, Türliste zum Abhaken |
 | 2.4 | gezeichnetes Symbol des Vereins auf Schreibtisch und Home-Bildschirm |
