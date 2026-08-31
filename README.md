@@ -19,6 +19,9 @@ Anleitung ist der Weg hinein. Sie entsteht aus `Bedienungsanleitung.html` —
 eine einzelne Datei mit eingebetteten Bildern, die sich im Browser über
 *Drucken → Als PDF sichern* neu ausgeben lässt.
 
+Was besprochen, aber noch nicht gebaut ist, steht in
+[`Vorhaben.md`](Vorhaben.md).
+
 ## Wie es arbeitet
 
 Jede Karte trägt einen QR-Code aus drei Teilen: dem Kürzel der
