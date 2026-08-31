@@ -403,6 +403,105 @@ td.n,th.n{text-align:right}
 }
 .etikett.raster .mass{font-size:7pt}
 
+/* ------------------- Die Kasse auf einer Seite -------------------
+
+   Auf einem Laptop standen Kacheln und Buchung untereinander: wer eine Karte
+   buchte, sah die Summe erst nach dem Rollen. Ein Laptopschirm ist aber breit
+   und nicht hoch — nebeneinander ist die richtige Antwort, und dann passt
+   alles auf eine Seite.
+
+   Angewandt wird das nur, wo Platz dafür ist. Auf einem schmalen oder
+   niedrigen Fenster bleibt es untereinander; dort wäre eine zweite Spalte
+   schmaler als die Wörter, die darin stehen. */
+body.eineSeite{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+body.eineSeite header{flex:0 0 auto}
+/* Der Kopf schrumpft: wer die Veranstaltung angelegt hat, weiß, welche
+   läuft. Lesbar muss sie bleiben, groß nicht. */
+body.eineSeite .kopfzeile{padding-top:8px;padding-bottom:6px}
+body.eineSeite .anlassName{font-size:17px;line-height:1.2}
+body.eineSeite .anlassZusatz{font-size:11px;margin-top:1px}
+body.eineSeite .marke{font-size:10px}
+body.eineSeite nav{padding-bottom:4px}
+body.eineSeite nav button{padding-top:7px;padding-bottom:7px}
+/* `width:100%` sieht überflüssig aus, ist es aber nicht. `main` trägt
+   `margin:0 auto` aus der Hausbreite. Ein Flexkind mit selbsttätigen Rändern
+   quer zur Achse wird nicht gedehnt, sondern nach seinem Inhalt bemessen —
+   und der Inhalt sind die Kacheln, deren Größe wir gerade erst ausrechnen
+   wollen. Das dreht sich im Kreis: jede Messung machte die Spalte schmaler,
+   und nach ein paar Runden stand alles auf dem Mindestmaß. */
+body.eineSeite main{flex:1 1 auto;min-height:0;width:100%;
+  padding-top:12px;padding-bottom:12px;
+  display:flex;flex-direction:column}
+/* Die Zeile muss ausdrücklich die volle Höhe bekommen. Ohne
+   `grid-template-rows` richtet sie sich nach ihrem Inhalt — und der Inhalt
+   richtet sich nach der gemessenen Höhe. Das dreht sich im Kreis, und
+   herausgekommen ist dabei die kleinstmögliche Kachel. */
+body.eineSeite #reiter-kasse{flex:1 1 auto;min-height:0;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);
+  grid-template-rows:minmax(0,1fr);
+  gap:14px;align-items:stretch}
+body.eineSeite #reiter-kasse > .karte{margin:0;display:flex;flex-direction:column;
+  min-height:0}
+/* Läuft doch einmal etwas über — zwölf Kategorien, oder ein fest
+   eingestelltes Kachelmaß —, rollt die Spalte für sich und nicht die ganze
+   Seite. Der Kopf bleibt dabei stehen. */
+body.eineSeite #reiter-kasse > .karte > .inhalt{flex:1 1 auto;min-height:0;overflow:auto}
+body.eineSeite #reiter-kasse > .karte > .titel{flex:0 0 auto}
+/* Die rechte Spalte ist schmal. Eine Reihe aus vier Wahlknöpfen bricht darin
+   die Wörter mitten entzwei — "Mehrere pro" über "Seite". In zwei Reihen zu
+   zweit steht jedes Wort ganz da. */
+body.eineSeite #reiter-kasse .wahl{flex-wrap:wrap}
+body.eineSeite #reiter-kasse .wahl button{flex:1 1 45%;border-radius:var(--radius);
+  border-left-width:1px;margin:1px}
+
+/* --------------- Kachelmaß ---------------
+   Gerechnet wird in JavaScript, weil CSS die Höhe des Kastens nicht kennt,
+   bevor die Kacheln darin stehen. Hier steht nur, wie das Ergebnis wirkt. */
+.kacheln{--kachelmass:130px}
+/* Feste Spaltenbreite statt `1fr`: nur so bleibt die Kachel wirklich
+   quadratisch. Mit `1fr` bekäme sie die Breite der Spalte und die Höhe aus
+   dem Maß — bei wenigen Kategorien wurde daraus ein liegendes Rechteck von
+   321 auf 240. Was an Breite übrig bleibt, verteilt sich links und rechts;
+   mittig sieht das nach Absicht aus, linksbündig nach Versehen. */
+.kacheln.gemessen{grid-template-columns:repeat(var(--spalten,3),var(--kachelmass));
+  justify-content:center}
+.kacheln.gemessen .kachel{height:var(--kachelmass);min-height:0}
+/* Die Beschriftung wächst mit der Kachel — auf einer kleinen Kachel stünde
+   sonst ein Wort in Übergröße und der Preis fiele heraus. */
+/* Auf einer gemessenen Kachel ist der Platz gezählt. "Erwachsene" ist ein
+   Wort ohne Fuge — es läuft sonst unter die Zahl oben rechts und über den
+   Rand hinaus. Also kleinere Schrift, und wenn es dann immer noch nicht
+   reicht, wird getrennt statt überlaufen. */
+/* Alles auf einer gemessenen Kachel folgt ihrem Maß. Die Zahlen sind an
+   einer Kachel von 156 Punkten eingemessen, dem engsten Fall, der bei zwölf
+   Kategorien auf einem Laptop herauskommt: dort muss "Erwachsene" neben die
+   Zahl oben rechts passen, ohne getrennt zu werden. */
+.kacheln.gemessen .kachel{padding:clamp(8px,calc(var(--kachelmass)*.085),15px)}
+.kacheln.gemessen .kachel .bez{
+  font-size:clamp(13px,calc(var(--kachelmass)*.105),24px);
+  padding-right:clamp(26px,calc(var(--kachelmass)*.245),46px);
+  overflow-wrap:break-word;overflow:hidden}
+/* Preis und Restzahl untereinander statt nebeneinander: nebeneinander passte
+   "12,00 € noch 200 von 200" auf keine kleine Kachel. */
+.kacheln.gemessen .kachel .preis{flex-direction:column;align-items:flex-start;gap:1px;
+  font-size:clamp(12px,calc(var(--kachelmass)*.105),16px)}
+.kacheln.gemessen .kachel .rest{font-size:clamp(10px,calc(var(--kachelmass)*.09),14px)}
+.kacheln.gemessen .kachel .zahl{
+  min-width:clamp(22px,calc(var(--kachelmass)*.19),34px);
+  height:clamp(22px,calc(var(--kachelmass)*.19),34px);
+  top:6px;right:6px;font-size:clamp(12px,calc(var(--kachelmass)*.115),19px)}
+/* Auf der gewöhnlichen, breiten Kachel sitzt das Minus unten rechts. Auf
+   einer quadratischen ist unten rechts die Restzahl — "noch 198 von 200"
+   lief darunter hindurch. In der Mitte der rechten Kante ist dagegen nichts,
+   weil Name und Preis oben und unten kleben; dort steht es frei, und der
+   Daumen trifft es besser. */
+.kacheln.gemessen .kachel .weniger{
+  width:clamp(26px,calc(var(--kachelmass)*.26),42px);
+  height:clamp(26px,calc(var(--kachelmass)*.26),42px);
+  bottom:auto;top:50%;transform:translateY(-50%);
+  right:6px;font-size:clamp(15px,calc(var(--kachelmass)*.17),25px)}
+.kacheln.gemessen .kachel.imkorb .preis{padding-right:0}
+
 /* ---------------------- Der Türschirm ----------------------
 
    An der Tür steht ein Handy, oft ein kleines. Dort zählt dreierlei: welcher
@@ -431,7 +530,7 @@ body.nurEinlass .tuerZeile{display:block;font-size:11px;color:var(--kopfWeich);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body.nurEinlass .kopfFeld{padding:5px 8px;font-size:13px;max-width:42vw}
 
-body.nurEinlass main{flex:1 1 auto;min-height:0;max-width:none;
+body.nurEinlass main{flex:1 1 auto;min-height:0;max-width:none;width:100%;
   padding:8px 10px;display:flex;flex-direction:column}
 body.nurEinlass #reiter-einlass{flex:1 1 auto;min-height:0;
   display:flex;flex-direction:column;gap:8px}
@@ -671,6 +770,30 @@ body.nurEinlass #btnEntsperren{margin-left:auto}
         <button class="knopf hide" id="btnEvAbbrechen">Abbrechen</button>
       </div>
       <div id="evFehler" class="hinweis hide"></div>
+    </div>
+  </div>
+
+  <div class="karte">
+    <div class="titel"><h2>Ansicht</h2></div>
+    <div class="inhalt">
+      <div class="feldTitel">Größe der Kacheln an der Kasse</div>
+      <div class="wahl" id="wahlKachel">
+        <button type="button" data-kachel="auto">Automatisch</button>
+        <button type="button" data-kachel="110">Klein</button>
+        <button type="button" data-kachel="140">Mittel</button>
+        <button type="button" data-kachel="180">Groß</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">
+        <b>Automatisch</b> rechnet die Kacheln so groß, dass alle zusammen auf
+        den Schirm passen — dann steht die Kasse ohne Rollen vor einem. Wer es
+        größer mag, stellt ein festes Maß ein; passt dann nicht alles, rollt
+        das Kachelfeld für sich.
+      </p>
+      <p class="muted" style="margin:8px 0 0">
+        Die Einstellung gehört diesem Gerät und wandert nicht mit dem
+        Abgleich: der Laptop drinnen und das Handy an der Tür haben nicht
+        dieselben Schirme.
+      </p>
     </div>
   </div>
 
@@ -971,7 +1094,7 @@ body.nurEinlass #btnEntsperren{margin-left:auto}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "2.8";
+var VERSION = "2.9";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
@@ -1302,6 +1425,15 @@ function leereDaten(){
        der Inhalt, wie weit das Papier vorgeschoben wird. */
     rolle:{breite:62, hoehe:29, rand:2},
     ablage:{adresse:"", wort:"", intervall:0},
+    /* Wie groß die Kacheln sein sollen. "auto" heißt: so groß, dass alle
+       zusammen auf den Schirm passen. Wer es größer mag — größerer Schirm,
+       schlechtere Augen, dicke Finger —, stellt ein festes Maß ein und nimmt
+       dafür in Kauf, dass gerollt werden muss.
+
+       Wie das Kassenzeichen und die Sperre gehört das dem Gerät und nicht
+       dem Abend: der Laptop drinnen und das Handy an der Tür haben nicht
+       dieselben Schirme. Es wandert deshalb nicht mit dem Abgleich. */
+    ansicht:{kachel:"auto"},
     /* Ein Gerät an der Tür soll einlassen und sonst nichts. Die Sperre
        gehört dem Gerät, nicht dem Abend — sie wandert deshalb nicht mit dem
        Abgleich, sonst legte ein gesperrtes Türgerät die Kasse drinnen still.
@@ -1381,6 +1513,10 @@ function migriere(d){
   if(d.ablage&&typeof d.ablage==="object"){
     neu.ablage={adresse:String(d.ablage.adresse||""), wort:String(d.ablage.wort||""),
                 intervall:Number(d.ablage.intervall)||0};
+  }
+  if(d.ansicht&&typeof d.ansicht==="object"){
+    var k=String(d.ansicht.kachel||"auto");
+    neu.ansicht.kachel = (k==="auto"||/^[0-9]{2,3}$/.test(k)) ? k : "auto";
   }
   if(d.sperre&&typeof d.sperre==="object")
     neu.sperre={an:!!d.sperre.an, wort:String(d.sperre.wort||"")};
@@ -1713,6 +1849,7 @@ function zeichneKacheln(){
     });
     box.appendChild(b);
   });
+  kachelnMessen();
 }
 
 function zeichneBuchung(){
@@ -3010,6 +3147,7 @@ function wolkePaket(){
   delete k.ablage;
   delete k.kassenzeichen;
   delete k.sperre;
+  delete k.ansicht;
   return k;
 }
 
@@ -3385,6 +3523,95 @@ function allesZeichnen(){
   zeichneListe(); zeichneZahlen(); zeichneAbschluss();
 }
 
+/* ===================== Die Kasse auf einer Seite =====================
+
+   Zwei Dinge greifen hier ineinander. Die Anordnung — Kacheln links, Buchung
+   rechts — macht das Stilblatt, sobald das Fenster breit und hoch genug ist.
+   Das Kachelmaß muss dagegen gerechnet werden: CSS weiß nicht, wie hoch der
+   Kasten ist, ehe die Kacheln darin stehen, und genau das ist die Frage.
+
+   Gesucht ist das größte Quadrat, bei dem alle Kacheln zusammen in den
+   sichtbaren Kasten passen. Mit mehr Spalten werden die Kacheln kleiner, aber
+   die Reihen weniger; die erste Spaltenzahl, bei der es aufgeht, liefert
+   also das größte Maß. */
+
+var EINESEITE_BREIT=920, EINESEITE_HOCH=600;
+
+function eineSeiteMoeglich(){
+  return !gesperrt() && window.innerWidth>=EINESEITE_BREIT &&
+         window.innerHeight>=EINESEITE_HOCH;
+}
+
+function eineSeitePruefen(){
+  var an = eineSeiteMoeglich() && !$("reiter-kasse").classList.contains("hide");
+  document.body.classList.toggle("eineSeite", an);
+  kachelnMessen();
+}
+
+/* Feste Maße für die, denen die Automatik zu klein gerät. */
+var KACHELMASSE={klein:"110", mittel:"140", gross:"180"};
+
+function kachelnMessen(){
+  var box=$("kacheln"); if(!box) return;
+  var n=db.kats.length;
+  if(!n){ box.classList.remove("gemessen"); return; }
+
+  var wunsch=(db.ansicht&&db.ansicht.kachel)||"auto";
+  var lueck=10;
+
+  if(wunsch!=="auto"){
+    /* Festes Maß: so viele Spalten wie hineinpassen, der Rest rollt. */
+    var mass=Number(wunsch)||140;
+    var breite=box.clientWidth||600;
+    var spalten=Math.max(1, Math.floor((breite+lueck)/(mass+lueck)));
+    box.classList.add("gemessen");
+    box.style.setProperty("--spalten", Math.min(spalten,n));
+    box.style.setProperty("--kachelmass", mass+"px");
+    return;
+  }
+
+  /* Automatisch. Ohne begrenzten Kasten gibt es nichts auszurechnen — dann
+     bleibt die gewöhnliche Anordnung mit ihren zwei oder drei Spalten. */
+  if(!document.body.classList.contains("eineSeite")){
+    box.classList.remove("gemessen");
+    box.style.removeProperty("--spalten");
+    return;
+  }
+
+  var kasten=box.parentElement;
+  var stil=getComputedStyle(kasten);
+  var hoch=kasten.clientHeight - parseFloat(stil.paddingTop) - parseFloat(stil.paddingBottom);
+  var breit=box.clientWidth;
+  if(!(hoch>0 && breit>0)) return;
+
+  var bestes=0, besteSpalten=1;
+  for(var c=1;c<=n;c++){
+    var w=(breit - lueck*(c-1))/c;
+    var reihen=Math.ceil(n/c);
+    var h=reihen*w + lueck*(reihen-1);
+    if(h<=hoch){ bestes=w; besteSpalten=c; break; }
+  }
+  if(!bestes){                       /* passt bei keiner Spaltenzahl */
+    besteSpalten=n; bestes=(breit - lueck*(n-1))/n;
+  }
+  /* Nach unten, damit auf einem Berührschirm noch zu treffen ist; nach oben,
+     damit drei Kategorien keine Kacheln von der Größe eines Bierdeckels
+     ergeben. */
+  bestes=Math.max(92, Math.min(260, Math.floor(bestes)));
+
+  box.classList.add("gemessen");
+  box.style.setProperty("--spalten", besteSpalten);
+  box.style.setProperty("--kachelmass", bestes+"px");
+}
+
+function zeichneKachelwahl(){
+  var kn=$("wahlKachel"); if(!kn) return;
+  var jetzt=(db.ansicht&&db.ansicht.kachel)||"auto";
+  kn.querySelectorAll("button").forEach(function(b){
+    b.setAttribute("aria-pressed", b.getAttribute("data-kachel")===jetzt ? "true":"false");
+  });
+}
+
 /* ========================= Nur-Einlass-Betrieb =========================
 
    Bis hierher war jedes Gerät eine vollständige Kasse. An der Tür ist das
@@ -3418,7 +3645,7 @@ function darfAendern(){
 
 function sperreAnwenden(){
   document.body.classList.toggle("nurEinlass", gesperrt());
-  if(gesperrt()) reiterZeigen("einlass");
+  if(gesperrt()){ document.body.classList.remove("eineSeite"); reiterZeigen("einlass"); }
   var kasten=$("sperrKasten");
   if(kasten) kasten.classList.toggle("hide", !gesperrt());
   var knopf=$("btnSperren");
@@ -3496,6 +3723,7 @@ function reiterZeigen(name){
      Storno oder ein Abgleich mit einem anderen Gerät die freien Plätze
      verändert haben. */
   if(name==="kasse"){ zeichneKacheln(); zeichneBuchung(); }
+  eineSeitePruefen();
   if(name!=="einlass") kameraAus();
   if(name==="einlass") $("scanFeld").focus();
   if(name==="tickets"){ zeichneListe(); zeichneZahlen(); zeichneAbschluss(); }
@@ -3517,7 +3745,15 @@ function start(){
   katFormular(null);
   evFormular(null);
   zeichnePruefLog();
+  zeichneKachelwahl();
   sperreAnwenden();
+  eineSeitePruefen();
+  /* Ein Laptop wird gedreht, ein Fenster wird kleiner gezogen, ein zweiter
+     Bildschirm kommt dazu. Das Maß muss dann neu gerechnet werden. */
+  var messUhr=null;
+  window.addEventListener("resize",function(){
+    clearTimeout(messUhr); messUhr=setTimeout(eineSeitePruefen,120);
+  });
   wolkeUhrStellen();
   /* Beim Öffnen einmal holen: das Gerät soll nicht mit einem Stand von
      gestern in den Abend gehen. */
@@ -3796,6 +4032,12 @@ function start(){
 
   /* ---- Veranstalter ---- */
   /* ---- Einlass ---- */
+  $("wahlKachel").addEventListener("click",function(e){
+    var w=e.target.getAttribute&&e.target.getAttribute("data-kachel");
+    if(!w) return;
+    db.ansicht.kachel=w; sichern(); zeichneKachelwahl(); kachelnMessen();
+    melden(w==="auto" ? "Kacheln füllen den Schirm" : "Kachelgröße gespeichert");
+  });
   $("wahlTon").addEventListener("click",function(e){
     var w=e.target.getAttribute&&e.target.getAttribute("data-ton");
     if(!w) return;
