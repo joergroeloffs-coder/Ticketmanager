@@ -22,6 +22,23 @@ Urteilen, nicht nur mit „Gültig".
 
 Aufwand: klein. Eine Sitzung mit Bildern zum Vergleichen.
 
+### Bar je Kasse auf dem Abschluss
+
+Der Abschluss nennt unter *Zusammen* den Betrag, der an Bargeld da sein muss —
+ohne Stornos, ohne nachgetragene Karten. Er gilt aber für die Veranstaltung,
+nicht für die einzelne Geldkassette. Verkaufen zwei Leute nebeneinander, sagt
+er 533,00 €, aber nicht, wie viel davon in welcher Kassette liegen muss. Beim
+Abrechnen am Küchentisch ist das die gesuchte Zahl.
+
+Die Zuordnung ist längst da: das Kassenzeichen steht vorne in jeder Nummer
+(`SF26-B0007X1`). Es käme eine Tabelle *Bar je Kasse* dazu, wie es sie für
+den Einlass schon gibt.
+
+Dazuzusagen: Karten ohne gesetztes Kassenzeichen landen unter *ohne Zeichen*,
+und die Zahlen stimmen erst nach dem Abgleich.
+
+Aufwand: eine halbe Sitzung.
+
 ## Ohne Datum
 
 ### Eine Generalprobe an echter Technik
@@ -65,6 +82,33 @@ hinterher schnell eintragen, ohne jede einzeln zu suchen.
 
 Machbar nur mit einem Server: die Schlüssel von PayPal dürfen nicht in einer
 öffentlichen Seite stehen. Für einen Abend mit Bargeld unverhältnismäßig.
+
+### Ein Kassensystem für den Verkaufsstand
+
+Erwogen: Bondruck, Mehrwertsteuersätze, Warengruppen, Bestände, Abrechnung
+nach Steuersatz. Technisch wäre das wenig Arbeit — der Rollendruck steht, die
+Kategorien sind fast schon Warengruppen.
+
+Verworfen aus zwei Gründen, und beide sind grundsätzlich.
+
+**Recht.** Wer eine elektronische Kasse benutzt, braucht nach § 146a AO eine
+zertifizierte technische Sicherheitseinrichtung, dazu Belegausgabe,
+DSFinV-K-Export und die Meldung ans Finanzamt. Eine TSE ist Hardware oder ein
+kostenpflichtiger Cloud-Dienst mit geheimem Schlüssel; an beides kommt eine
+öffentliche Seite ohne Server nicht heran. Gemeinnützigkeit befreit davon
+nicht. (Keine Steuerberatung — die Frage gehört dem Steuerberater des Vereins
+vorgelegt, und zwar auch für die Ticketkasse selbst.)
+
+**Bauweise.** Diese Anwendung ist offline zuerst, jedes Gerät für sich,
+Zusammenführen beim Abgleich, Löschen über Grabsteine. Eine Kasse braucht das
+Gegenteil: ein lückenloses, unveränderbares Journal je Kasse. Die Grabsteine
+sind hier richtig und wären dort ein Verstoß gegen die GoBD — ihr ganzer Zweck
+ist, dass Dinge verschwinden. Das wäre kein Umbau, sondern eine andere
+Maschine im selben Gehäuse.
+
+Was stattdessen bleibt: die Warenzählung, wie sie ohnehin stattfindet, und die
+Zahl auf dem Abschluss, wie viel Geld in der Kasse sein muss. Braucht der
+Verein wirklich eine Kasse, wird sie gekauft, nicht gebaut.
 
 ## Erledigt
 
