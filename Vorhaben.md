@@ -22,6 +22,47 @@ Urteilen, nicht nur mit „Gültig".
 
 Aufwand: klein. Eine Sitzung mit Bildern zum Vergleichen.
 
+### Kassenseite auf dem Verkaufsgerät: kompakter, auf eine Seite
+
+Auf dem Laptop, auf dem verkauft wird, passt die Kassenseite nicht auf einen
+Schirm. Die Kacheln sind gut zu treffen, aber zu groß; die Buchung steht
+darunter und ist erst nach dem Scrollen zu sehen. Wer verkauft, will Kacheln
+und Buchung gleichzeitig sehen.
+
+Was zu ändern ist:
+
+- **Kacheln annähernd quadratisch und kleiner.** Heute `min-height:110px` in
+  zwei Spalten, ab 680 Punkten in dreien. Auf einem breiten Schirm dürfen es
+  mehr Spalten und ein festes Seitenverhältnis sein.
+- **Der Kopf schrumpft.** „Winterfest" muss dort nicht in sechsundzwanzig
+  Punkt stehen — wer die Veranstaltung angelegt hat, weiß, welche läuft. Klein
+  genug, dass es noch zu erkennen ist, mehr nicht.
+- **Die Buchung nach rechts**, als Liste: Artikel, Preis, darunter die Summe.
+  Daneben die Kacheln.
+
+Es ist dieselbe Frage wie beim Einlassschirm auf dem Laptop, nur für die
+andere Seite: breiter Schirm, also nebeneinander statt untereinander. Beide
+sollten denselben Umbruchpunkt benutzen und in einem Zug gemacht werden.
+
+Zu bedenken:
+
+- Die Buchungskarte enthält mehr als die Liste — Gastname, die Wahl zwischen
+  einem Code je Platz und einem für alle, die vier Drucklayouts, den
+  Druckknopf. Das alles in eine schmale Spalte zu pressen wird eng. Zu
+  entscheiden: wandert die ganze Karte nach rechts, oder nur Liste und Summe,
+  und die Druckwahl bleibt darunter?
+- „Ohne Scrollen" trägt nur bis zu einer gewissen Zahl von Kategorien. Ab
+  wann rollt das Kachelfeld für sich, statt die ganze Seite länger zu machen?
+- Die Kacheln dürfen nicht so klein werden, dass man auf einem Berührschirm
+  danebentrifft. Etwa neunzig bis hundertzehn Punkte im Quadrat ist die
+  Untergrenze.
+- Die Seite ist auf 1080 Punkte Breite begrenzt (`.seitenBreite`). Für zwei
+  Spalten nebeneinander könnte das zu schmal sein.
+
+Aufwand: mittel. Reine Anordnung, aber mehr Entscheidungen als beim
+Einlassschirm. Gemessen auf 1280 × 800, 1440 × 900 und 1920 × 1080, dazu mit
+vier und mit zehn Kategorien.
+
 ### Einlassschirm auf dem Verkaufsgerät: Bild links, Urteil rechts
 
 Der Türschirm gilt nur für gesperrte Geräte. Auf dem Gerät, auf dem verkauft
