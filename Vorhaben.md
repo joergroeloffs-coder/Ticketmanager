@@ -22,6 +22,34 @@ Urteilen, nicht nur mit „Gültig".
 
 Aufwand: klein. Eine Sitzung mit Bildern zum Vergleichen.
 
+### Einlassschirm auf dem Verkaufsgerät: Bild links, Urteil rechts
+
+Der Türschirm gilt nur für gesperrte Geräte. Auf dem Gerät, auf dem verkauft
+wird — meist ein Laptop —, steht der Einlass weiter im gewöhnlichen Layout,
+und dort ist das Kamerabild mit `width:100%; max-height:320px` viel zu groß.
+Es schiebt das Urteil aus dem Bild; ob grün oder rot erscheint, ist ohne
+Scrollen nicht zu sehen. Genau der Fehler, den der Türschirm am Handy behoben
+hat — auf dem breiten Schirm ist er nur später aufgefallen.
+
+Ein Laptop ist breit und nicht hoch. Die Lösung ist deshalb nicht dieselbe
+wie am Handy (untereinander), sondern nebeneinander: links das Kamerabild,
+klein, rechts daneben das Urteil, groß.
+
+Zu bedenken:
+
+- Ab welcher Breite umgeschaltet wird. Unter etwa 700 Punkten bleibt es
+  untereinander, sonst wird die Spalte zu schmal für „Andere Veranstaltung".
+- Der Kasten *Zuletzt geprüft* steht darunter und darf nicht mitwachsen.
+- Auf dem Verkaufsgerät wird zwischen Kasse und Einlass hin- und hergesprungen;
+  die Kamera läuft dabei weiter. Das Umschalten darf sie nicht anhalten.
+- Das Urteil darf hier ruhig ebenfalls vollflächig grün oder rot werden. Am
+  Handy hat sich das bewährt, und der Grund ist derselbe: aus zwei Metern
+  Entfernung über den Tresen zu erkennen.
+
+Aufwand: klein bis mittel. Reine Anordnung, kein neuer Zustand. Gemessen wird
+auf 1280 × 800, 1440 × 900 und einem schmalen Fenster, damit der Umbruch
+stimmt.
+
 ### Bar je Kasse auf dem Abschluss
 
 Der Abschluss nennt unter *Zusammen* den Betrag, der an Bargeld da sein muss —
