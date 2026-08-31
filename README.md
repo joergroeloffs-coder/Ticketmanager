@@ -312,6 +312,30 @@ wie am Abend selbst, nur aus dem Gedächtnis. **Vor dem Abschließen** ist der
 richtige Zeitpunkt für eine Sicherung unter *Einstellungen → Sicherung*,
 falls doch noch jemand eine einzelne Karte nachschlagen will.
 
+## Die Kasse auf einer Seite
+
+Auf einem Laptop standen Kacheln und Buchung untereinander: wer eine Karte
+buchte, sah die Summe erst nach dem Rollen. Ein Laptopschirm ist aber breit
+und nicht hoch. Ist das Fenster mindestens 920 × 600 Punkte groß, ordnet die
+Kasse sich deshalb um — **Kacheln links, Buchung rechts**, der Kopf schrumpft,
+und alles steht ohne Rollen vor einem. Auf schmalen Fenstern und am Handy
+bleibt es untereinander; dort wäre eine zweite Spalte schmaler als die Wörter
+darin.
+
+Die Kacheln werden dabei **quadratisch und so groß, dass alle zusammen auf
+den Schirm passen**. Gerechnet wird das Maß, nicht geraten: gesucht ist die
+kleinste Spaltenzahl, bei der alle Reihen in den sichtbaren Kasten passen —
+denn mit mehr Spalten werden die Kacheln kleiner, aber die Reihen weniger.
+Untergrenze zweiundneunzig Punkte, damit ein Daumen noch trifft; Obergrenze
+zweihundertsechzig, damit drei Kategorien keine Kacheln von Bierdeckelgröße
+ergeben.
+
+Wem das zu klein gerät — größerer Schirm, schlechtere Augen —, der stellt
+unter *Einstellungen → Ansicht* ein festes Maß ein: klein, mittel oder groß.
+Dann rollt das Kachelfeld für sich, wenn nicht alles hineinpasst. Die
+Einstellung gehört dem Gerät und wandert nicht mit dem Abgleich: der Laptop
+drinnen und das Handy an der Tür haben nicht dieselben Schirme.
+
 ## Nur Einlass: ein Gerät für die Tür
 
 Bis Fassung 2.6 war jedes Gerät eine vollständige Kasse — auch das, das
@@ -520,7 +544,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **2.8** | eigener Türschirm fürs Einlasshandy; Karten anderer Abende richtig erkannt |
+| **2.9** | die Kasse passt auf eine Seite: Kacheln links, Buchung rechts, Kachelmaß einstellbar |
+| 2.8 | eigener Türschirm fürs Einlasshandy; Karten anderer Abende richtig erkannt |
 | 2.7 | Geräte an der Tür lassen sich auf reinen Einlass beschränken |
 | 2.6 | Bedienungsanleitung als PDF; Restzahl auf der Kachel wieder lesbar |
 | 2.5 | Löschen hält über Geräte hinweg, Abende abschließen, Türliste zum Abhaken |
