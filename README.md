@@ -255,6 +255,13 @@ nichts verkauft ist. Darunter, wer eingelassen hat, je Gerät.
 läuft weiter; es kommt vor, dass abgerechnet wird, während die letzten Gäste
 noch eintrudeln. Wieder öffnen geht jederzeit an derselben Stelle.
 
+**Bar je Kasse** steht darunter, sobald mehr als ein Gerät verkauft hat: was
+in welcher Geldkassette liegen muss. Die Zuordnung steckt in der Nummer —
+`SF26-`**`B`**`0007X1` hat Gerät B verkauft —, gezählt wird ohne Stornos und
+ohne nachgetragene Karten, denn deren Geld liegt in einer anderen Kassette.
+Verkauft nur ein Gerät, bleibt die Tabelle fort; dann sagt die Zeile
+*Zusammen* schon alles.
+
 **Drucken** legt den Abschluss auf ein A4-Blatt im Druckbild des
 Vereinsmanagers — mit Veranstalter im Kopf, Datum und Kürzel. Die
 Kassenprüfung will einen Beleg sehen, kein Bildschirmfoto.
@@ -375,6 +382,21 @@ Wer die Zahl vergisst, kommt nur noch über *Browserdaten löschen* an das
 Gerät — und damit wäre auch sein Stand fort. Ist eine Ablage eingerichtet,
 holt sich das Gerät danach alles von selbst zurück; ohne Ablage ist der
 Stand dieses Geräts verloren. Also aufschreiben.
+
+### Das große Urteil
+
+Am Eingang zählt eine Frage: grün oder rot. Das Urteil wird deshalb so groß
+gesetzt, wie der Kasten hergibt — und zwar gerechnet, nicht geraten. Die
+Schrift wird von vierundachtzig Punkten heruntergefahren, bis weder die
+längste Zeile über den Rand noch der Block über die Höhe hinausragt, mit
+etwas Luft an beiden Kanten. „Gültig" steht dadurch in vierundachtzig Punkt,
+„Andere Veranstaltung" in vierundfünfzig, und beide füllen ihren Platz.
+
+Groß gesetzt wird es an zwei Stellen: am gesperrten Türhandy immer, und auf
+dem Verkaufsgerät, sobald der Einlass auf einer Seite steht (Fenster
+mindestens 920 × 600). Dort steht das Kamerabild klein links und das Urteil
+groß rechts — vorher schob das Bild mit dreihundertzwanzig Punkten Höhe das
+Urteil aus dem Fenster.
 
 ### Der Türschirm
 
@@ -544,7 +566,8 @@ nebeneinanderlegt, sieht daran, ob beide denselben Stand haben.
 
 | | |
 | --- | --- |
-| **2.9** | die Kasse passt auf eine Seite: Kacheln links, Buchung rechts, Kachelmaß einstellbar |
+| **3.0** | großes Urteil am Eingang, Einlass auf einer Seite, Bar je Kasse |
+| 2.9 | die Kasse passt auf eine Seite: Kacheln links, Buchung rechts, Kachelmaß einstellbar |
 | 2.8 | eigener Türschirm fürs Einlasshandy; Karten anderer Abende richtig erkannt |
 | 2.7 | Geräte an der Tür lassen sich auf reinen Einlass beschränken |
 | 2.6 | Bedienungsanleitung als PDF; Restzahl auf der Kachel wieder lesbar |

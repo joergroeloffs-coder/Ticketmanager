@@ -238,6 +238,7 @@ label.feld>span,.feldTitel{display:block;font-size:11px;text-transform:uppercase
 .befund{border-radius:var(--radius);padding:14px;margin-top:12px;
         font-family:'Newsreader',Georgia,serif;font-size:19px}
 .befund .dazu{font-family:'Inter',system-ui,sans-serif;font-size:14px;margin-top:4px}
+.befund .urteilblock{max-width:100%}
 .b-ja{background:var(--wattHell);color:var(--watt);border:1px solid var(--watt)}
 .b-nein{background:var(--ziegelHell);color:var(--ziegel);border:1px solid var(--ziegel)}
 .b-still{background:var(--papier);color:var(--tinteWeich);border:1px solid var(--linieFein);
@@ -539,8 +540,14 @@ body.nurEinlass #reiter-einlass{flex:1 1 auto;min-height:0;
 body.nurEinlass #reiter-einlass > .karte{margin:0;border:0;box-shadow:none;background:none}
 body.nurEinlass #reiter-einlass > .karte:first-child{flex:1 1 auto;min-height:0;display:flex}
 body.nurEinlass #reiter-einlass > .karte:first-child > .titel{display:none}
+/* `min-width:0` ist hier kein Zierat. Die Karte darüber ist ein Flexkasten in
+   Zeilenrichtung, und ein Flexkind darin schrumpft von sich aus nicht unter
+   sein längstes Wort. "Veranstaltung" in achtzig Punkt machte daraus eine
+   Spalte von 393 Punkten in einem Fenster von 360 — der Rand der Karte lief
+   aus dem Bild, und die Knöpfe unten gleich mit. */
 body.nurEinlass #reiter-einlass > .karte:first-child > .inhalt{
-  flex:1 1 auto;min-height:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  flex:1 1 auto;min-width:0;min-height:0;padding:0;
+  display:flex;flex-direction:column;gap:8px}
 body.nurEinlass #reiter-einlass > .karte:nth-child(2){display:none}
 
 /* Reihenfolge: Bild, Urteil, Eingabe. Auf dem Schirm steht das Urteil damit
@@ -548,18 +555,60 @@ body.nurEinlass #reiter-einlass > .karte:nth-child(2){display:none}
 body.nurEinlass #video{order:1;flex:0 1 auto;width:100%;max-height:26dvh;
   object-fit:cover;border-radius:var(--radius);margin:0}
 body.nurEinlass #kameraHinweis{order:2;margin:0;font-size:12px;padding:8px 10px}
-body.nurEinlass #befund{order:3;flex:1 1 auto;min-height:74px;margin:0;
+/* `width:100%` und der Block darin ebenso: sonst bemisst sich der Kasten an
+   seinem längsten Wort statt an der Spalte. Bei "Veranstaltung" in achtzig
+   Punkt wurde daraus eine Seite, die breiter war als das Handy — auf dem
+   Schirm sah man den Rand der Karte nicht mehr, und die Knöpfe unten
+   rutschten aus dem Bild. */
+/* ---- Das große Urteil ----
+   Dieselbe Gestalt am Türhandy wie auf dem Laptop: die Frage ist beide Male,
+   ob aus zwei Metern zu erkennen ist, was die Kasse sagt. Die Schriftgröße
+   steht in `--urteilmass` und wird gerechnet, nicht gesetzt.
+
+   `width:100%` und der Block darin ebenso: sonst bemisst sich der Kasten an
+   seinem längsten Wort statt an der Spalte. */
+#befund.gross{margin:0;width:100%;align-self:stretch;min-height:74px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;padding:10px 14px;line-height:1.05;
-  font-size:clamp(26px,8vw,44px)}
-body.nurEinlass #befund .dazu{font-size:clamp(13px,3.6vw,17px);line-height:1.3;
-  margin-top:8px;opacity:.92;max-width:34ch}
+  text-align:center;padding:10px 14px;overflow:hidden}
+#befund.gross .urteilblock{width:100%}
+#befund.gross .wort{font-size:var(--urteilmass,32px);line-height:1.03}
+#befund.gross .dazu{font-size:calc(var(--urteilmass,32px)*.36);
+  line-height:1.25;margin-top:.3em;opacity:.92;max-width:30ch;
+  margin-left:auto;margin-right:auto}
 /* Voll durchgefärbt statt zart getönt: das muss aus einem Meter Abstand und
    im halbdunklen Saal zu erkennen sein. */
-body.nurEinlass #befund.b-ja{background:var(--watt);color:#fff;border-color:var(--watt)}
-body.nurEinlass #befund.b-nein{background:var(--ziegel);color:#fff;border-color:var(--ziegel)}
+#befund.gross.b-ja{background:var(--watt);color:#fff;border-color:var(--watt)}
+#befund.gross.b-nein{background:var(--ziegel);color:#fff;border-color:var(--ziegel)}
 @keyframes aufleuchten{from{filter:brightness(1.85)}to{filter:brightness(1)}}
-body.nurEinlass #befund.leuchtet{animation:aufleuchten .45s ease-out}
+#befund.gross.leuchtet{animation:aufleuchten .45s ease-out}
+body.nurEinlass #befund{order:3;flex:1 1 auto}
+
+/* ---- Der Einlass auf dem Verkaufsgerät ----
+   Dasselbe wie bei der Kasse: der Schirm ist breit und nicht hoch. Also das
+   Kamerabild klein nach links, das Urteil groß nach rechts. Bisher stand das
+   Bild mit dreihundertzwanzig Punkten Höhe oben und schob das Urteil aus dem
+   Fenster — grün oder rot war erst nach dem Rollen zu sehen. */
+body.eineSeite #reiter-einlass{flex:1 1 auto;min-height:0;
+  display:flex;flex-direction:column;gap:12px}
+body.eineSeite #reiter-einlass > .karte{margin:0}
+body.eineSeite #reiter-einlass > .karte:first-child{flex:1 1 auto;min-height:0;
+  display:flex;flex-direction:column}
+body.eineSeite #reiter-einlass > .karte:first-child > .titel{flex:0 0 auto}
+body.eineSeite #reiter-einlass > .karte:first-child > .inhalt{
+  flex:1 1 auto;min-height:0;min-width:0;
+  display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);
+  grid-template-rows:auto auto 1fr auto;gap:10px 16px}
+body.eineSeite #reiter-einlass #video{grid-area:1/1/2/2;
+  width:100%;max-height:210px;object-fit:cover;margin:0;align-self:start}
+body.eineSeite #reiter-einlass #kameraHinweis{grid-area:2/1/3/2;margin:0;font-size:13px}
+body.eineSeite #reiter-einlass .eingabe{grid-area:4/1/5/2;align-self:end;
+  display:flex;flex-direction:column;gap:8px}
+body.eineSeite #reiter-einlass .eingabe .reihe{margin:0 !important}
+body.eineSeite #reiter-einlass #befund{grid-area:1/2/5/3}
+/* Die Liste der letzten Prüfungen bleibt darunter, aber gedeckelt: sie darf
+   dem Urteil keinen Platz wegnehmen. */
+body.eineSeite #reiter-einlass > .karte:nth-child(2){flex:0 0 auto}
+body.eineSeite #reiter-einlass > .karte:nth-child(2) > .inhalt{max-height:132px;overflow:auto}
 
 /* Eingabefeld und die beiden Knöpfe teilen sich eine Zeile. */
 body.nurEinlass .eingabe{order:4;flex:0 0 auto;display:flex;gap:6px;align-items:stretch}
@@ -685,7 +734,7 @@ body.nurEinlass #btnEntsperren{margin-left:auto}
       <video id="video" playsinline muted class="hide" style="margin-top:10px"></video>
       <canvas id="lesefeld" class="hide"></canvas>
       <div id="kameraHinweis" class="hinweis hide"></div>
-      <div id="befund" class="befund b-still">Noch nichts geprüft.</div>
+      <div id="befund" class="befund b-still"><div class="urteilblock"><div class="wort">Noch nichts geprüft.</div></div></div>
     </div>
   </div>
 
@@ -1094,7 +1143,7 @@ body.nurEinlass #btnEntsperren{margin-left:auto}
    nebeneinanderlegen zu können. Sie gehört bei jeder Änderung, die man
    merkt, weitergedreht — sonst behauptet ein alter Stand, er sei der
    neue. Was welche Fassung brachte, steht im README. */
-var VERSION = "2.9";
+var VERSION = "3.0";
 
 /* ================== SHA-256 und HMAC ==================
    WebCrypto steht nur auf https-Seiten zur Verfügung. Die Ticketkasse wird
@@ -1747,6 +1796,14 @@ function plaetzeAus(nummer){
   return (n>0&&n<1000)?n:1;
 }
 function plaetzeVon(t){ return t.plaetze || plaetzeAus(t.nummer); }
+
+/* Das Kassenzeichen des verkaufenden Geräts steht als erster Buchstabe in
+   der Nummer. Fehlt es — auf einem Gerät ohne eigenes Zeichen —, fängt die
+   Nummer mit einer Ziffer an. */
+function verkauftVon(t){
+  var m=/^([A-Z])/.exec(String(t.nummer||""));
+  return m ? m[1] : "";
+}
 function ticketCode(t){ return t.kuerzel+"-"+t.nummer+"-"+t.sig; }
 
 /* ============================== Kasse ============================== */
@@ -2139,6 +2196,19 @@ function abschlussDrucken(){
     h+=zeile("storniert",d.summe.storniert,"—","—","—");
   h+='</table>';
 
+  var kassen=Object.keys(d.kassen).sort();
+  if(kassen.length>1){
+    h+='<div class="titel klein">Bar je Kasse</div>'+
+       '<table><tr><th>Kasse</th><th class="n">Plätze</th><th class="n">Karten</th>'+
+       '<th class="n">Euro</th><th></th></tr>';
+    kassen.forEach(function(g){
+      var z=d.kassen[g];
+      h+=zeile(esc(kassenName(g)), z.plaetze, z.karten, eur(z.cent), "");
+    });
+    h+=zeile("Zusammen", d.summe.verkauft, "—", eur(d.summe.cent), "", true);
+    h+='</table>';
+  }
+
   if(geraete.length){
     h+='<div class="titel klein">Einlass nach Gerät</div>'+
        '<table><tr><th>Gerät</th><th class="n">Plätze</th><th class="n">Karten</th>'+
@@ -2151,7 +2221,10 @@ function abschlussDrucken(){
   }
 
   h+='<div class="fuss">Aufgestellt von der Ticketkasse '+VERSION+
-     '. Plätze, nicht Karten: eine Karte kann für mehrere gelten.</div></div>';
+     '. Plätze, nicht Karten: eine Karte kann für mehrere gelten.'+
+     (kassen.length>1 ? ' Bar je Kasse zählt ohne Stornos und ohne nachgetragene '+
+      'Karten — deren Geld liegt in der Kassette des Geräts, das sie verkauft hat.' : '')+
+     '</div></div>';
 
   var bogen=$("bogen");
   bogen.className="bogen bericht";
@@ -2407,25 +2480,23 @@ function zugangLesen(roh){
      hängt das Gerät an eine andere Ablage. An der Tür hat das nichts zu
      suchen — dort wird gescannt. */
   if(gesperrt()){
-    feld.className="befund b-nein";
-    feld.textContent="Dieses Gerät ist auf Einlass beschränkt. Der Zugang lässt "+
-                     "sich hier nicht ändern.";
+    urteilSchreiben("b-nein","Nicht möglich",
+      "Dieses Gerät ist auf Einlass beschränkt. Der Zugang lässt sich hier "+
+      "nicht ändern.");
     klingen(false);
     return true;
   }
   if(!confirm("Zugang zur Ablage von einem anderen Gerät übernehmen?\n\n"+
               adresse+"\n\nDie eigenen Angaben werden dabei ersetzt.")){
-    feld.className="befund b-still";
-    feld.textContent="Zugang nicht übernommen.";
+    urteilSchreiben("b-still","Zugang nicht übernommen","");
     return true;
   }
   db.ablage={adresse:adresse, wort:wort, intervall:db.ablage.intervall||1};
   sichern(); wolkeUhrStellen();
   $("wolkeAdresse").value=adresse; $("wolkeWort").value=wort;
   zeichneWolke();
-  feld.className="befund b-ja";
-  feld.innerHTML="Zugang übernommen"+
-    '<div class="dazu">Die Ablage ist eingetragen. Der Abgleich läuft gleich an.</div>';
+  urteilSchreiben("b-ja","Zugang übernommen",
+    "Die Ablage ist eingetragen. Der Abgleich läuft gleich an.");
   klingen(true);
   wolkeAbgleichen();
   return true;
@@ -2436,13 +2507,7 @@ function pruefe(roh){
   var code=String(roh||"").trim().toUpperCase();
   var feld=$("befund");
   function befund(art,titel,dazu){
-    feld.className="befund "+art;
-    feld.innerHTML=esc(titel)+(dazu?'<div class="dazu">'+esc(dazu)+'</div>':"");
-    /* Zweimal dasselbe Urteil hintereinander sähe sonst aus, als sei nichts
-       geschehen. Ein kurzes Aufhellen sagt: gelesen. Der Neustart der
-       Bildfolge braucht den erzwungenen Umbruch dazwischen. */
-    feld.classList.remove("leuchtet"); void feld.offsetWidth;
-    feld.classList.add("leuchtet");
+    urteilSchreiben(art,titel,dazu);
     var gut=(art==="b-ja");
     klingen(gut);
     pruefungen.unshift({zeit:Date.now(), code:code, gut:gut, text:titel});
@@ -3256,12 +3321,16 @@ function geraeteName(zeichen){
   return zeichen ? "Gerät "+zeichen : "ohne Zeichen";
 }
 
+function kassenName(zeichen){
+  return zeichen ? "Kasse "+zeichen : "ohne Kassenzeichen";
+}
+
 function abschlussDaten(ev){
   if(!ev) return null;
   var liste=db.tickets.filter(function(t){ return t.evId===ev.id; });
 
-  var nach={}, gerAete={}, summe={verkauft:0, eingeloest:0, storniert:0,
-                                 nachgetragen:0, cent:0};
+  var nach={}, gerAete={}, kassen={}, summe={verkauft:0, eingeloest:0, storniert:0,
+                                        nachgetragen:0, cent:0};
 
   liste.forEach(function(t){
     var p=plaetzeVon(t);
@@ -3277,6 +3346,17 @@ function abschlussDaten(ev){
       nach[k].verkauft+=p; nach[k].cent+=(t.cent||0);
       summe.verkauft+=p; summe.cent+=(t.cent||0);
       if(t.status==="eingeloest"){ nach[k].eingeloest+=p; summe.eingeloest+=p; }
+
+      /* Welche Geldkassette das Geld bekommen hat, steht vorne in der Nummer:
+         SF26-B0007X1 hat Gerät B verkauft. Es wird also nichts mitgeschrieben,
+         was nicht ohnehin dasteht — es wird nur ausgewertet.
+
+         Gezählt wird dasselbe wie bei den Einnahmen: keine Stornos, keine
+         nachgetragenen Karten. Deren Geld liegt in einer anderen Kassette,
+         und wie viel es war, weiß dieses Gerät gar nicht. */
+      var kasse=verkauftVon(t);
+      if(!kassen[kasse]) kassen[kasse]={plaetze:0, karten:0, cent:0};
+      kassen[kasse].plaetze+=p; kassen[kasse].karten++; kassen[kasse].cent+=(t.cent||0);
     }
 
     if(t.status==="eingeloest"){
@@ -3288,7 +3368,7 @@ function abschlussDaten(ev){
   });
 
   return { ev:ev, zeit:db.geschlossen[ev.id]||null,
-           nach:nach, geraete:gerAete, summe:summe };
+           nach:nach, geraete:gerAete, kassen:kassen, summe:summe };
 }
 
 function zeichneAbschluss(){
@@ -3356,6 +3436,26 @@ function zeichneAbschluss(){
        '<td class="n muted">—</td></tr>';
   }
   h+='</table>';
+
+  /* Was in welcher Geldkassette liegen muss. Bei einem einzigen
+     verkaufenden Gerät steht es schon in der Zeile "Zusammen" — dann spart
+     die Tabelle nur Platz und wird weggelassen. */
+  var kassen=Object.keys(d.kassen).sort();
+  if(kassen.length>1){
+    h+='<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;'+
+       'color:var(--tinteWeich);margin:20px 0 8px">Bar je Kasse</h2>'+
+       '<table><tr><th>Kasse</th><th class="n">Plätze</th><th class="n">Karten</th>'+
+       '<th class="n">Euro</th></tr>';
+    kassen.forEach(function(g){
+      var z=d.kassen[g];
+      h+='<tr><td>'+esc(kassenName(g))+'</td>'+
+         '<td class="n">'+z.plaetze+'</td><td class="n">'+z.karten+'</td>'+
+         '<td class="n">'+eur(z.cent)+'</td></tr>';
+    });
+    h+='<tr style="font-weight:600"><td>Zusammen</td>'+
+       '<td class="n">'+d.summe.verkauft+'</td><td class="n">—</td>'+
+       '<td class="n">'+eur(d.summe.cent)+'</td></tr></table>';
+  }
 
   h+='<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;'+
      'color:var(--tinteWeich);margin:20px 0 8px">Einlass nach Gerät</h2>';
@@ -3542,10 +3642,27 @@ function eineSeiteMoeglich(){
          window.innerHeight>=EINESEITE_HOCH;
 }
 
+/* Die eine Seite gilt für die Kasse und für den Einlass — beide leiden am
+   selben Übel, wenn der Schirm breit und nicht hoch ist. */
 function eineSeitePruefen(){
-  var an = eineSeiteMoeglich() && !$("reiter-kasse").classList.contains("hide");
+  var offen = ["kasse","einlass"].filter(function(r){
+    return !$("reiter-"+r).classList.contains("hide"); })[0];
+  var an = eineSeiteMoeglich() && !!offen;
   document.body.classList.toggle("eineSeite", an);
+  urteilGross();
   kachelnMessen();
+}
+
+/* Groß steht das Urteil überall dort, wo es Platz dafür gibt: am gesperrten
+   Türhandy immer, auf dem Verkaufsgerät, sobald der Einlass auf einer Seite
+   steht. */
+function urteilGross(){
+  var feld=$("befund"); if(!feld) return;
+  var gross = gesperrt() ||
+    (document.body.classList.contains("eineSeite") &&
+     !$("reiter-einlass").classList.contains("hide"));
+  feld.classList.toggle("gross", gross);
+  urteilAnpassen();
 }
 
 /* Feste Maße für die, denen die Automatik zu klein gerät. */
@@ -3648,6 +3765,7 @@ function sperreAnwenden(){
   if(gesperrt()){ document.body.classList.remove("eineSeite"); reiterZeigen("einlass"); }
   var kasten=$("sperrKasten");
   if(kasten) kasten.classList.toggle("hide", !gesperrt());
+  urteilGross();
   var knopf=$("btnSperren");
   if(knopf) knopf.textContent = gesperrt() ? "Sperre aufheben" : "Gerät sperren";
   zeichneTuerStand();
@@ -3666,6 +3784,68 @@ function zeichneTuerZeile(){
   zeile.textContent=[ev?ev.kuerzel:"kein Abend",
                      db.kassenzeichen?"Gerät "+db.kassenzeichen:"ohne Zeichen",
                      VERSION].join(" · ");
+}
+
+/* Das Urteil soll so groß stehen, wie es der Kasten hergibt. Eine feste
+   Größe kann das nicht: "Gültig" hat sechs Zeichen, "Keine Veranstaltung
+   gewählt" achtundzwanzig, und beide sollen den Platz ausfüllen, den sie
+   haben — das eine mit einer sehr großen Schrift, das andere mit einer, die
+   gerade noch in drei Zeilen passt.
+
+   Also wird angepasst: von oben herunter, bis nichts mehr über den Kasten
+   hinausragt. Das kostet ein paar Umbrüche, aber nur beim Urteil, und das
+   fällt einmal je gescannter Karte an. */
+/* Der Inhalt steht in einem eigenen Block. Das ist nicht Zierde: der Kasten
+   zentriert seinen Inhalt, und was aus einem zentrierten Kasten herausragt,
+   ragt oben und unten gleichermaßen heraus. `scrollHeight` zählt aber nur
+   nach unten — es meldete "passt", während oben schon die halbe Zeile fehlte.
+   Ein Block lässt sich messen. */
+function urteilSchreiben(art, titel, dazu){
+  var feld=$("befund");
+  feld.className="befund "+art;
+  feld.innerHTML='<div class="urteilblock"><div class="wort">'+esc(titel)+'</div>'+
+    (dazu ? '<div class="dazu">'+esc(dazu)+'</div>' : '')+'</div>';
+  urteilGross();
+  /* Zweimal dasselbe Urteil hintereinander sähe sonst aus, als sei nichts
+     geschehen. Ein kurzes Aufhellen sagt: gelesen. Der Neustart der
+     Bildfolge braucht den erzwungenen Umbruch dazwischen. */
+  feld.classList.remove("leuchtet"); void feld.offsetWidth;
+  feld.classList.add("leuchtet");
+}
+
+/* Wie breit die längste Zeile wirklich ist. `scrollWidth` taugt dafür nicht:
+   der Text ist mittig gesetzt, eine zu lange Zeile ragt links und rechts
+   gleich weit hinaus, und gezählt wird nur die rechte Hälfte —
+   "Veranstaltung" stand deshalb über beide Kanten hinaus und die Messung
+   meldete "passt". Ein Bereich über den Text liefert je Zeile ein Rechteck,
+   und die sind nicht vom Kasten beschnitten. */
+function zeilenbreite(el){
+  if(!el) return 0;
+  var bereich=document.createRange();
+  bereich.selectNodeContents(el);
+  var kaesten=bereich.getClientRects(), breit=0;
+  for(var i=0;i<kaesten.length;i++) if(kaesten[i].width>breit) breit=kaesten[i].width;
+  return breit;
+}
+
+function urteilAnpassen(){
+  var feld=$("befund");
+  if(!feld || !feld.classList.contains("gross")) return;
+  var block=feld.querySelector(".urteilblock"); if(!block) return;
+  var wort=block.querySelector(".wort"), dazu=block.querySelector(".dazu");
+  var stil=getComputedStyle(feld);
+  var hoch=feld.clientHeight-parseFloat(stil.paddingTop)-parseFloat(stil.paddingBottom);
+  var breit=feld.clientWidth-parseFloat(stil.paddingLeft)-parseFloat(stil.paddingRight);
+  if(!(hoch>0 && breit>0)) return;
+  /* Etwas Luft lassen. Genau bis an die Kante gesetzt sieht es aus, als sei
+     es abgeschnitten — "Andere Veranstaltung" traf die Breite auf den Punkt
+     und wirkte dadurch beschnitten, obwohl es passte. */
+  breit*=0.94; hoch*=0.97;
+  for(var mass=84; mass>=18; mass-=2){
+    feld.style.setProperty("--urteilmass", mass+"px");
+    if(block.getBoundingClientRect().height<=hoch &&
+       zeilenbreite(wort)<=breit && zeilenbreite(dazu)<=breit) return;
+  }
 }
 
 function zeichneTuerStand(){
@@ -3752,7 +3932,8 @@ function start(){
      Bildschirm kommt dazu. Das Maß muss dann neu gerechnet werden. */
   var messUhr=null;
   window.addEventListener("resize",function(){
-    clearTimeout(messUhr); messUhr=setTimeout(eineSeitePruefen,120);
+    clearTimeout(messUhr);
+    messUhr=setTimeout(eineSeitePruefen,120);
   });
   wolkeUhrStellen();
   /* Beim Öffnen einmal holen: das Gerät soll nicht mit einem Stand von

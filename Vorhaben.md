@@ -5,67 +5,7 @@ Gedächtnis: Sitzungen enden, die Liste bleibt. Erledigtes wandert nach unten.
 
 ## Nächste Überarbeitung
 
-### Schrift auf dem Türschirm größer
-
-Das Urteil bekommt am Handy zwischen 250 und 450 Punkte Höhe, die Schrift
-steht bei `clamp(26px, 8vw, 44px)`. Auf den Bildern ist zu sehen, dass
-darunter noch Luft ist — die farbige Fläche trägt auch eine deutlich größere
-Schrift, ohne dass Grün oder Rot dadurch schlechter zu erkennen wären. Der
-Grund ist das, was zählt; er darf mitwachsen, muss aber deutlich kleiner
-bleiben als das Urteil selbst.
-
-Zu bedenken: „Andere Veranstaltung" und „Bereits eingelöst" sind lange
-Wörter. Die Schrift muss sich am längsten Urteil messen, nicht am kürzesten,
-sonst bricht „Veranstaltung" mitten im Wort um. Gemessen wird wieder auf
-360 × 640, 375 × 667, 375 × 812 und 393 × 852, und zwar mit allen sechs
-Urteilen, nicht nur mit „Gültig".
-
-Aufwand: klein. Eine Sitzung mit Bildern zum Vergleichen.
-
-### Einlassschirm auf dem Verkaufsgerät: Bild links, Urteil rechts
-
-Der Türschirm gilt nur für gesperrte Geräte. Auf dem Gerät, auf dem verkauft
-wird — meist ein Laptop —, steht der Einlass weiter im gewöhnlichen Layout,
-und dort ist das Kamerabild mit `width:100%; max-height:320px` viel zu groß.
-Es schiebt das Urteil aus dem Bild; ob grün oder rot erscheint, ist ohne
-Scrollen nicht zu sehen. Genau der Fehler, den der Türschirm am Handy behoben
-hat — auf dem breiten Schirm ist er nur später aufgefallen.
-
-Ein Laptop ist breit und nicht hoch. Die Lösung ist deshalb nicht dieselbe
-wie am Handy (untereinander), sondern nebeneinander: links das Kamerabild,
-klein, rechts daneben das Urteil, groß.
-
-Zu bedenken:
-
-- Ab welcher Breite umgeschaltet wird. Unter etwa 700 Punkten bleibt es
-  untereinander, sonst wird die Spalte zu schmal für „Andere Veranstaltung".
-- Der Kasten *Zuletzt geprüft* steht darunter und darf nicht mitwachsen.
-- Auf dem Verkaufsgerät wird zwischen Kasse und Einlass hin- und hergesprungen;
-  die Kamera läuft dabei weiter. Das Umschalten darf sie nicht anhalten.
-- Das Urteil darf hier ruhig ebenfalls vollflächig grün oder rot werden. Am
-  Handy hat sich das bewährt, und der Grund ist derselbe: aus zwei Metern
-  Entfernung über den Tresen zu erkennen.
-
-Aufwand: klein bis mittel. Reine Anordnung, kein neuer Zustand. Gemessen wird
-auf 1280 × 800, 1440 × 900 und einem schmalen Fenster, damit der Umbruch
-stimmt.
-
-### Bar je Kasse auf dem Abschluss
-
-Der Abschluss nennt unter *Zusammen* den Betrag, der an Bargeld da sein muss —
-ohne Stornos, ohne nachgetragene Karten. Er gilt aber für die Veranstaltung,
-nicht für die einzelne Geldkassette. Verkaufen zwei Leute nebeneinander, sagt
-er 533,00 €, aber nicht, wie viel davon in welcher Kassette liegen muss. Beim
-Abrechnen am Küchentisch ist das die gesuchte Zahl.
-
-Die Zuordnung ist längst da: das Kassenzeichen steht vorne in jeder Nummer
-(`SF26-B0007X1`). Es käme eine Tabelle *Bar je Kasse* dazu, wie es sie für
-den Einlass schon gibt.
-
-Dazuzusagen: Karten ohne gesetztes Kassenzeichen landen unter *ohne Zeichen*,
-und die Zahlen stimmen erst nach dem Abgleich.
-
-Aufwand: eine halbe Sitzung.
+Zurzeit nichts. Was besprochen war, ist gebaut.
 
 ## Ohne Datum
 
@@ -140,6 +80,8 @@ Verein wirklich eine Kasse, wird sie gekauft, nicht gebaut.
 
 ## Erledigt
 
+- 3.0 Das Urteil am Eingang wird eingepasst statt gesetzt; der Einlass steht
+  auf dem Verkaufsgerät auf einer Seite; Bar je Kasse auf dem Abschluss
 - 2.9 Die Kasse passt auf eine Seite: Kacheln links, Buchung rechts,
   Kachelmaß automatisch oder fest
 - 2.8 Türschirm fürs Einlasshandy; Karten anderer Abende richtig erkannt
