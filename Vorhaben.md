@@ -5,7 +5,29 @@ Gedächtnis: Sitzungen enden, die Liste bleibt. Erledigtes wandert nach unten.
 
 ## Nächste Überarbeitung
 
-Zurzeit nichts. Was besprochen war, ist gebaut.
+### Zurücksetzen sagt nicht, was es tut
+
+Der Knopf unter *Einstellungen → Zurücksetzen* fragt: „Wirklich alle
+Veranstaltungen, Kategorien und Tickets löschen?" — und setzt dann **alles**
+zurück außer dem Veranstalternamen. Auch die Adresse der Ablage, das
+Zugangswort, das Kassenzeichen und den Schlüssel; der wird neu gewürfelt.
+
+Das ist beim Benutzen aufgefallen und hat Zeit gekostet: hinterher war die
+Ablage nicht mehr eingetragen, und der neue Schlüssel sah aus wie die Ursache
+eines Anmeldefehlers, der ganz woanders herkam.
+
+Zu ändern:
+
+- Die Abfrage muss aufzählen, was verschwindet — mit den Zahlen dazu
+  („3 Veranstaltungen, 46 Karten, die Ablage, der Schlüssel").
+- Sie muss sagen, was sie **nicht** anfasst: die Datei in der Ablage. Solange
+  die steht und die Adresse noch eingetragen ist, holt der nächste Abgleich
+  alles zurück. Das ist die eigentliche Falle.
+- Zu überlegen: zwei Knöpfe statt einem — *Abend leeren* (Veranstaltungen,
+  Kategorien, Karten) und *Gerät zurücksetzen* (alles). Meist ist das erste
+  gemeint.
+
+Aufwand: klein.
 
 ## Ohne Datum
 
