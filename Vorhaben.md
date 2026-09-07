@@ -5,6 +5,41 @@ Gedächtnis: Sitzungen enden, die Liste bleibt. Erledigtes wandert nach unten.
 
 ## Nächste Überarbeitung
 
+### Die Kategorie auf der Karte soll mit ihrer Länge schrumpfen
+
+Auf der gedruckten Karte steht die Kategorie in fester Größe — 16 pt auf dem
+Bogen, 26 pt auf der ganzen Seite, 12 pt auf dem Etikett, 11 pt auf der Rolle.
+Bei „Erwachsene" ist das richtig. Bei einer Sammelkarte steht dort aber die
+ganze Zusammenstellung: „1 Eintritt, 1 Haxe, 1 Bier 1,0, 1 Brez´n" — und die
+füllt in 26 pt die halbe Karte, während Preis und Code an den Rand gedrängt
+werden.
+
+Es ist dieselbe Frage wie beim Urteil am Eingang, nur andersherum: dort soll
+die Schrift wachsen, bis der Platz gefüllt ist, hier soll sie weichen, bis der
+Text hineinpasst.
+
+Der Weg ist auch derselbe und steht schon da: `urteilAnpassen()` misst mit
+`zeilenbreite()` die längste Zeile und fährt die Größe herunter. Das ließe
+sich zu einer gemeinsamen Funktion machen, die einen Kasten und einen Text
+bekommt.
+
+Zu bedenken:
+
+- Beim Druck ist die Messung heikler als am Bildschirm: gerechnet wird in
+  Millimetern, und die Karte ist zum Zeitpunkt des Messens noch nicht
+  gedruckt. Die Messung muss also vor `window.print()` laufen, auf dem
+  fertig aufgebauten Bogen.
+- Vier Drucklayouts, vier Kästen: mehrere pro Seite, eine pro Seite,
+  Etikettenbogen, Etikettendrucker. Jedes hat eine andere Grundgröße und
+  eine andere Untergrenze.
+- Eine Untergrenze braucht es: unter etwa 8 pt ist auf einem Aufkleber
+  nichts mehr zu lesen. Wird der Text auch dann noch zu lang, muss er
+  umbrechen dürfen statt weiter zu schrumpfen.
+- Geprüft wird mit einer kurzen Kategorie („Erwachsene") und der längsten
+  Sammelkarte, die sich anlegen lässt.
+
+Aufwand: mittel. Die Messerei ist gebaut, die vier Layouts sind die Arbeit.
+
 ### Zurücksetzen sagt nicht, was es tut
 
 Der Knopf unter *Einstellungen → Zurücksetzen* fragt: „Wirklich alle
